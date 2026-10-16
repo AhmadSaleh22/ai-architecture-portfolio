@@ -1,27 +1,28 @@
-%% C4 Level 1: System Context (DRAFT) · Wasel customer-care assistant
+%% C4 Level 1: System Context (DRAFT) · Musaed ERP / HR copilot
 flowchart LR
-    cust["👤 Customer<br/><i>[Person]</i><br/>Mobile subscriber, Arabic/English"]
-    agent["👤 Call-centre agent<br/><i>[Person]</i><br/>Handles escalations"]
+    emp["👤 Employee<br/><i>[Person]</i><br/>1,400 across 5 companies, Arabic/English"]
+    mgr["👤 Manager<br/><i>[Person]</i><br/>Approves requests, asks team analytics"]
+    hr["👤 HR & Finance staff<br/><i>[Person]</i><br/>Handle escalations, own policies"]
 
-    wasel["<b>Wasel AI Assistant</b><br/><i>[Software System]</i><br/>Answers questions, looks up accounts,<br/>performs approved actions, hands off to humans"]
+    musaed["<b>Musaed AI Copilot</b><br/><i>[Software System]</i><br/>Policy Q&A, personal data lookup,<br/>drafts requests, role-scoped analytics"]
 
-    channels["WhatsApp / Mobile app<br/><i>[External System]</i>"]
-    crm["CRM & Billing<br/><i>[Existing System]</i><br/>Customer, bills, bundles"]
-    kb["Knowledge sources<br/><i>[Existing System]</i><br/>Tariffs, policies, wikis"]
-    llm["LLM provider / model server<br/><i>[External or self-hosted]</i>"]
-    contact["Contact-centre platform<br/><i>[Existing System]</i>"]
+    sso["SSO / Identity provider<br/><i>[Existing System]</i><br/>Users, roles, company"]
+    erp["In-house ERP<br/><i>[Existing System]</i><br/>Payroll, finance, treasury<br/>(Neo4j + REST APIs)"]
+    docs["Policy documents<br/><i>[Existing System]</i><br/>Per-company HR & finance policies"]
+    llm["LLM / embedding models<br/><i>[In-region API or self-hosted]</i>"]
 
-    cust -->|"Chats with [WhatsApp / in-app]"| channels
-    channels -->|"Forwards messages [Webhook/HTTPS]"| wasel
-    wasel -->|"Reads account, triggers actions [REST/OAuth2]"| crm
-    wasel -->|"Ingests documents [batch, weekly]"| kb
-    wasel -->|"Generation & embeddings [HTTPS]"| llm
-    wasel -->|"Escalates with summary [API]"| contact
-    agent -->|"Works escalations in"| contact
+    emp -->|"Asks questions, drafts requests [Web/mobile, HTTPS]"| musaed
+    mgr -->|"Approves, asks analytics [HTTPS]"| musaed
+    musaed -->|"Authenticates user, reads roles [OIDC]"| sso
+    musaed -->|"Reads data, submits drafts [REST/OAuth2]"| erp
+    musaed -->|"Ingests & indexes [batch, monthly]"| docs
+    musaed -->|"Generation & embeddings [HTTPS, in-region]"| llm
+    musaed -->|"Escalates with summary"| hr
+    mgr -->|"Final approval in"| erp
 
     classDef person fill:#08427b,color:#fff,stroke:#052e56
     classDef system fill:#1168bd,color:#fff,stroke:#0b4884
     classDef ext fill:#999,color:#fff,stroke:#6b6b6b
-    class cust,agent person
-    class wasel system
-    class channels,crm,kb,llm,contact ext
+    class emp,mgr,hr person
+    class musaed system
+    class sso,erp,docs,llm ext

@@ -49,9 +49,9 @@ An ADR captures **one significant decision**, why it was made, and what it costs
 
 | Option | Pros | Cons |
 |---|---|---|
-| **Telecom customer care (current draft)** | Arabic dialects, real PII, real tool actions, high scale → exercises every module; close to the instructor's industry | Large scope; must cut carefully |
-| E-commerce shopping/support assistant | Clear metrics (conversion, deflection), product catalog RAG | Less regulatory depth |
-| Government services assistant | Strongest compliance & security story | Harder to find realistic data; slower to prototype |
+| **ERP / HR & finance copilot (current draft)** | Built on my real ERP experience (1,400 employees, 5 companies, Saudi); access-controlled RAG, risky agent actions, Saudi PDPL: exercises every module | Sensitive data means security design must be strong from day one |
+| Manufacturing planning copilot | Closest to my latest role (10 plants, production planning) | Domain needs instructor approval; less regulatory depth |
+| TRENDOW restaurant assistant | My own product, so a real PoC is possible; Arabic/English | Lighter compliance and security story |
 
 ## 5. Framing questions to answer during/after Session 1
 
