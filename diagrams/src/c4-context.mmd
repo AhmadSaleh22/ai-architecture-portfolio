@@ -1,0 +1,27 @@
+%% C4 Level 1: System Context (DRAFT) · Wasel customer-care assistant
+flowchart LR
+    cust["👤 Customer<br/><i>[Person]</i><br/>Mobile subscriber, Arabic/English"]
+    agent["👤 Call-centre agent<br/><i>[Person]</i><br/>Handles escalations"]
+
+    wasel["<b>Wasel AI Assistant</b><br/><i>[Software System]</i><br/>Answers questions, looks up accounts,<br/>performs approved actions, hands off to humans"]
+
+    channels["WhatsApp / Mobile app<br/><i>[External System]</i>"]
+    crm["CRM & Billing<br/><i>[Existing System]</i><br/>Customer, bills, bundles"]
+    kb["Knowledge sources<br/><i>[Existing System]</i><br/>Tariffs, policies, wikis"]
+    llm["LLM provider / model server<br/><i>[External or self-hosted]</i>"]
+    contact["Contact-centre platform<br/><i>[Existing System]</i>"]
+
+    cust -->|"Chats with [WhatsApp / in-app]"| channels
+    channels -->|"Forwards messages [Webhook/HTTPS]"| wasel
+    wasel -->|"Reads account, triggers actions [REST/OAuth2]"| crm
+    wasel -->|"Ingests documents [batch, weekly]"| kb
+    wasel -->|"Generation & embeddings [HTTPS]"| llm
+    wasel -->|"Escalates with summary [API]"| contact
+    agent -->|"Works escalations in"| contact
+
+    classDef person fill:#08427b,color:#fff,stroke:#052e56
+    classDef system fill:#1168bd,color:#fff,stroke:#0b4884
+    classDef ext fill:#999,color:#fff,stroke:#6b6b6b
+    class cust,agent person
+    class wasel system
+    class channels,crm,kb,llm,contact ext
