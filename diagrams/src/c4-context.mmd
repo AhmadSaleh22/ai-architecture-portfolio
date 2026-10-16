@@ -1,28 +1,33 @@
-%% C4 Level 1: System Context (DRAFT) · Musaed ERP / HR copilot
+%% C4 Level 1: System Context (DRAFT) · Production Planning Copilot · Nahda Beverages (fictional)
 flowchart LR
-    emp["👤 Employee<br/><i>[Person]</i><br/>1,400 across 5 companies, Arabic/English"]
-    mgr["👤 Manager<br/><i>[Person]</i><br/>Approves requests, asks team analytics"]
-    hr["👤 HR & Finance staff<br/><i>[Person]</i><br/>Handle escalations, own policies"]
+    planner["👤 Production planner<br/><i>[Person]</i><br/>Approves/edits proposals"]
+    sup["👤 Shift supervisor<br/><i>[Person]</i><br/>Asks questions, writes handover notes"]
+    pm["👤 Plant manager<br/><i>[Person]</i><br/>Approves overtime & escalations"]
 
-    musaed["<b>Musaed AI Copilot</b><br/><i>[Software System]</i><br/>Policy Q&A, personal data lookup,<br/>drafts requests, role-scoped analytics"]
+    copilot["<b>Production Planning Copilot</b><br/><i>[Software System]</i><br/>Detects disruptions, proposes feasible<br/>re-plans, explains trade-offs (AR/EN)"]
 
-    sso["SSO / Identity provider<br/><i>[Existing System]</i><br/>Users, roles, company"]
-    erp["In-house ERP<br/><i>[Existing System]</i><br/>Payroll, finance, treasury<br/>(Neo4j + REST APIs)"]
-    docs["Policy documents<br/><i>[Existing System]</i><br/>Per-company HR & finance policies"]
-    llm["LLM / embedding models<br/><i>[In-region API or self-hosted]</i>"]
+    erp["ERP<br/><i>[Existing]</i><br/>Orders, BOM, materials"]
+    aps["Planning tool / APS<br/><i>[Existing]</i><br/>Current schedule"]
+    mes["MES / SCADA via OT DMZ gateway<br/><i>[Existing, OT zone]</i><br/>Machine states, counts"]
+    cmms["CMMS<br/><i>[Existing]</i><br/>Maintenance plan, repair ETA"]
+    docs["Document store<br/><i>[Existing]</i><br/>Planning rules, SOPs"]
+    llm["LLM service<br/><i>[In-region API or self-hosted]</i>"]
 
-    emp -->|"Asks questions, drafts requests [Web/mobile, HTTPS]"| musaed
-    mgr -->|"Approves, asks analytics [HTTPS]"| musaed
-    musaed -->|"Authenticates user, reads roles [OIDC]"| sso
-    musaed -->|"Reads data, submits drafts [REST/OAuth2]"| erp
-    musaed -->|"Ingests & indexes [batch, monthly]"| docs
-    musaed -->|"Generation & embeddings [HTTPS, in-region]"| llm
-    musaed -->|"Escalates with summary"| hr
-    mgr -->|"Final approval in"| erp
+    planner -->|"Reviews proposals, decides [Web UI]"| copilot
+    sup -->|"Questions, notes [Web/mobile]"| copilot
+    copilot -->|"Escalations needing approval"| pm
+    copilot -->|"Reads orders, materials [REST, read-only]"| erp
+    copilot -->|"Reads schedule; submits APPROVED draft changes [API]"| aps
+    mes -->|"Events & counts [one-way, MQTT/historian]"| copilot
+    copilot -->|"Reads PM windows, repair ETA [REST]"| cmms
+    copilot -->|"Indexes rules & SOPs [batch]"| docs
+    copilot -->|"Explanations, note analysis [HTTPS]"| llm
 
     classDef person fill:#08427b,color:#fff,stroke:#052e56
     classDef system fill:#1168bd,color:#fff,stroke:#0b4884
     classDef ext fill:#999,color:#fff,stroke:#6b6b6b
-    class emp,mgr,hr person
-    class musaed system
-    class sso,erp,docs,llm ext
+    classDef ot fill:#b85c00,color:#fff,stroke:#7a3d00
+    class planner,sup,pm person
+    class copilot system
+    class erp,aps,cmms,docs,llm ext
+    class mes ot

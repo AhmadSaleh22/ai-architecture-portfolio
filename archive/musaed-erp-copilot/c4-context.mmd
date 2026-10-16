@@ -1,0 +1,28 @@
+%% C4 Level 1: System Context (DRAFT) · Musaed ERP / HR copilot
+flowchart LR
+    emp["👤 Employee<br/><i>[Person]</i><br/>1,400 across 5 companies, Arabic/English"]
+    mgr["👤 Manager<br/><i>[Person]</i><br/>Approves requests, asks team analytics"]
+    hr["👤 HR & Finance staff<br/><i>[Person]</i><br/>Handle escalations, own policies"]
+
+    musaed["<b>Musaed AI Copilot</b><br/><i>[Software System]</i><br/>Policy Q&A, personal data lookup,<br/>drafts requests, role-scoped analytics"]
+
+    sso["SSO / Identity provider<br/><i>[Existing System]</i><br/>Users, roles, company"]
+    erp["In-house ERP<br/><i>[Existing System]</i><br/>Payroll, finance, treasury<br/>(Neo4j + REST APIs)"]
+    docs["Policy documents<br/><i>[Existing System]</i><br/>Per-company HR & finance policies"]
+    llm["LLM / embedding models<br/><i>[In-region API or self-hosted]</i>"]
+
+    emp -->|"Asks questions, drafts requests [Web/mobile, HTTPS]"| musaed
+    mgr -->|"Approves, asks analytics [HTTPS]"| musaed
+    musaed -->|"Authenticates user, reads roles [OIDC]"| sso
+    musaed -->|"Reads data, submits drafts [REST/OAuth2]"| erp
+    musaed -->|"Ingests & indexes [batch, monthly]"| docs
+    musaed -->|"Generation & embeddings [HTTPS, in-region]"| llm
+    musaed -->|"Escalates with summary"| hr
+    mgr -->|"Final approval in"| erp
+
+    classDef person fill:#08427b,color:#fff,stroke:#052e56
+    classDef system fill:#1168bd,color:#fff,stroke:#0b4884
+    classDef ext fill:#999,color:#fff,stroke:#6b6b6b
+    class emp,mgr,hr person
+    class musaed system
+    class sso,erp,docs,llm ext

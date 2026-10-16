@@ -1,0 +1,8 @@
+[
+  {"id": "E100", "name": "Ahmad Saleh",   "company": "najd",   "role": "employee", "manager": "E300", "basic_salary_sar": 14000, "leave_balance_days": 17},
+  {"id": "E101", "name": "Sara Al-Otaibi", "company": "najd",   "role": "employee", "manager": "E300", "basic_salary_sar": 12500, "leave_balance_days": 9},
+  {"id": "E200", "name": "Omar Haddad",    "company": "rawabi", "role": "employee", "manager": "E301", "basic_salary_sar": 7800,  "leave_balance_days": 22},
+  {"id": "E300", "name": "Laila Nasser",   "company": "najd",   "role": "manager",  "manager": null,   "basic_salary_sar": 26000, "leave_balance_days": 12},
+  {"id": "E301", "name": "Khaled Fahad",   "company": "rawabi", "role": "manager",  "manager": null,   "basic_salary_sar": 21000, "leave_balance_days": 4},
+  {"id": "E400", "name": "Mona Zaki",      "company": "najd",   "role": "hr",       "manager": null,   "basic_salary_sar": 18000, "leave_balance_days": 20}
+]

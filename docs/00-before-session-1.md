@@ -4,7 +4,7 @@ Personal prep notes before Session 1 (Sun 18 Oct, 19:00 Cairo).
 
 ## 1. Pre-course checklist
 
-- [ ] Push this repo to GitHub as **public** `ai-architecture-portfolio`
+- [x] Push this repo to GitHub as **public** `ai-architecture-portfolio`
 - [ ] Post the repo link in the course study group **before Sun 18 Oct**
 - [ ] Confirm or change the capstone domain (see §4)
 - [ ] Skim §2 (C4) and §3 (ADRs) and bring one question about each
@@ -28,7 +28,7 @@ C4 (Simon Brown) describes software at four levels, like zooming in on a map. Ea
 - In AI systems, draw the **LLM provider, vector store, eval/monitoring and guardrails** as explicit boxes. They are where cost, latency and risk live.
 - Supplementary views worth knowing: **dynamic** (numbered request flow), **deployment** (where it runs: region, VPC, GPU nodes).
 
-Draft context diagram for the scenario: [`../diagrams/src/c4-context.mmd`](../diagrams/src/c4-context.mmd).
+Draft context diagram for the scenario: [`../diagrams/src/c4-context.mmd`](../diagrams/src/c4-context.mmd). Also read [`00-capstone-considerations.md`](00-capstone-considerations.md) and [`data-plan.md`](data-plan.md).
 
 ## 3. Architecture Decision Records (ADRs)
 
@@ -49,9 +49,9 @@ An ADR captures **one significant decision**, why it was made, and what it costs
 
 | Option | Pros | Cons |
 |---|---|---|
-| **ERP / HR & finance copilot (current draft)** | Built on my real ERP experience (1,400 employees, 5 companies, Saudi); access-controlled RAG, risky agent actions, Saudi PDPL: exercises every module | Sensitive data means security design must be strong from day one |
-| Manufacturing planning copilot | Closest to my latest role (10 plants, production planning) | Domain needs instructor approval; less regulatory depth |
-| TRENDOW restaurant assistant | My own product, so a real PoC is possible; Arabic/English | Lighter compliance and security story |
+| **Manufacturing production-planning copilot (current)** | Closest to my latest role (multi-plant planning); agent with physical/commercial consequences; LLM vs optimiser split; OT/IT security; edge vs cloud | Needs instructor approval; must stay clear of employer-confidential details |
+| ERP / HR & finance copilot (fallback, in `archive/`) | Built on my ERP experience; access-controlled RAG; Saudi PDPL | More common "assistant" pattern |
+| Government citizen-services agent | Strongest regulatory story | No first-hand experience |
 
 ## 5. Framing questions to answer during/after Session 1
 

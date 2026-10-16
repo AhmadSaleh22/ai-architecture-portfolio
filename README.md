@@ -7,34 +7,35 @@ This repo holds one end-to-end architecture, built session by session, that beco
 
 ## Scenario (draft, to be confirmed in Session 1)
 
-**Domain:** Enterprise HR, payroll & finance (own domain, needs instructor approval)
-**System:** *"Musaed"*, a bilingual (Arabic/English) AI copilot on top of an in-house ERP for a Saudi holding group.
+**Domain:** Manufacturing: multi-plant production planning (own domain, needs instructor approval)
+**System:** *Production Planning Copilot* for **Nahda Beverages**, a fictional beverage manufacturer with 10 plants in Saudi Arabia, Egypt and the UAE.
 
-> Inspired by an ERP I built and led (team of 5) for **1,400 employees across 5 companies** in Saudi Arabia: payroll, finance and treasury, with org/payroll/finance data modelled in Neo4j behind REST APIs. Company details are generalised; numbers marked *Assumed* are mine to validate.
+> Inspired by my experience leading frontend architecture for a production-planning platform used by 10 manufacturing plants. The company, data and numbers here are **fictional and synthetic**; no employer or customer information is used.
 
-**Business problem.** HR and finance teams spend much of their time answering repetitive questions ("How many leave days do I have?", "Why did my salary change this month?", "What's the travel allowance policy?") and producing ad-hoc reports. Policies differ per company, exist in Arabic and English, and the data is highly sensitive (salaries, IDs, bank details).
+**Business problem.** When a line breaks down, a material delivery is late or a rush order arrives, planners rebuild the plan by hand across several systems. That takes 10–90 minutes per disruption. In the synthetic baseline, **20% of critical orders and 19% of high-priority orders finish late**, and changeovers eat 33–80 hours per line per month.
 
-**What the system does**
+**What the copilot does**
 
-1. **Policy Q&A:** answers HR/finance policy questions from Arabic + English documents (RAG), scoped to the employee's own company.
-2. **Personal data lookup:** "my payslip", "my leave balance", read only through existing ERP APIs, never by putting raw payroll tables into the prompt.
-3. **Approved actions (agent):** draft a leave request or expense claim; the employee confirms, and the normal manager approval flow still applies.
-4. **Manager & finance analytics:** natural-language questions over the org/payroll graph ("headcount cost by department in Company C, Q3"), limited by role.
-5. **Handoff:** escalates to HR with a summary when unsure or when the topic is sensitive (disputes, terminations).
+1. **Detects** disruptions from machine events, deliveries and new orders, and identifies affected orders.
+2. **Generates options** with a scheduler/optimiser (not the LLM), and **checks feasibility** in code: capacity, calendar, format, maintenance, frozen horizon.
+3. **Explains** each option in Arabic or English: impact on late orders, extra changeovers, which rules apply (cited), and what the shift notes say.
+4. **Planner decides**: approve, edit or reject. The decision and its reason are recorded. Nothing is written to MES/PLC.
+5. **Answers questions** like "Why is line 3 behind?" or "Can we fit this rush order?"
 
-**Why it's a strong capstone:** it hits every module: access-controlled RAG across 5 tenants, Arabic/English retrieval, LLM hosting under data-residency rules (Saudi PDPL), an agent touching money and HR records (approvals, guardrails), prompt-injection and data-leakage threats (one employee seeing another's salary), and measurable quality and cost targets.
+**Why it's a strong capstone:** an agent whose suggestions have physical and commercial consequences; a clear split between LLM and deterministic optimisation; OT/IT security boundaries; edge vs. cloud for plants with weak connectivity; messy multilingual data; and evaluation without a single "right answer".
+
+Before designing, read [`docs/00-capstone-considerations.md`](docs/00-capstone-considerations.md) and [`docs/data-plan.md`](docs/data-plan.md).
 
 ## Assumptions (to be validated)
 
 | # | Assumption | Source |
 |---|---|---|
-| A1 | 1,400 employees, 5 companies, each with its own policies | From my experience |
-| A2 | Org, payroll and finance data in Neo4j behind REST APIs; hosting on AWS/GCP | From my experience |
-| A3 | Employee and payroll data must stay in Saudi Arabia (Saudi PDPL) | Assumed, to verify in Session 5 |
-| A4 | ~300 policy/procedure documents, ~50% Arabic, updated monthly | Assumed |
-| A5 | ~30% of employees use it weekly; peak ~50 concurrent users at month-end payroll | Assumed |
-| A6 | Existing SSO with roles: employee, manager, HR, finance, admin | Assumed |
-| A7 | LLM cost target < $1,000/month at full adoption | Assumed |
+| A1 | 10 plants, ~40 lines, ~200 machines | Inspired by experience (generalised) |
+| A2 | Existing ERP, MES, APS/planning tool and CMMS; OT data leaves via a one-way DMZ gateway | Typical industrial setup, assumed |
+| A3 | 10–30 significant disruptions per day across all plants | Synthetic data |
+| A4 | Planners accept the copilot only if every proposal is feasible and explainable | Assumed, to validate with users |
+| A5 | Past planner decisions are **not** recorded today | Assumed (common in practice) |
+| A6 | Some plants have intermittent connectivity | Assumed |
 
 ## How to read this repo
 
@@ -44,10 +45,13 @@ This repo holds one end-to-end architecture, built session by session, that beco
 | [`diagrams/`](diagrams/) | Exported PNG/SVG in the root, editable sources in `src/` |
 | [`adr/`](adr/) | Architecture Decision Records, one per decision (`0001-...md`) |
 | [`capstone/`](capstone/) | Final architecture PDF + slides |
+| [`data/`](data/) | Synthetic factory data generator + data contracts/baseline KPIs |
+| [`archive/`](archive/) | Earlier scenario (ERP/HR copilot) kept as a fallback and practice lab |
 
 ## Progress
 
 - [x] Repo created
+- [x] Capstone considerations + data plan + synthetic data
 - [ ] Session 1: Architecture views, steps & process (18 Oct)
 - [ ] Session 2: AI system building blocks (25 Oct)
 - [ ] Session 3: LLM & RAG architecture (1 Nov)
