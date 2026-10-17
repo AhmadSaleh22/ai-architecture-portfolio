@@ -5,8 +5,11 @@ same model builder, solver and checker run on any config. This folder holds step
 two filled examples, and a checker.
 
 ```bash
-pip install pyyaml
-python3 engine/config_check.py                # checks every file in configs/, exits 1 on errors
+uv sync                                          # once, from the repo root (pyproject.toml + uv.lock)
+uv run python engine/config_check.py             # checks every file in configs/, exits 1 on errors
+uv run python engine/plan.py engine/configs/coffee_roastery.yaml engine/samples/coffee_orders.csv \
+    --start 2026-10-18T08:00 --solver rules      # or --solver cpsat; prints the plan, KPIs, check result
+uv run python -m unittest discover engine/tests  # model + checker tests
 ```
 
 | Config | Industry | Shape of the problem |
@@ -65,10 +68,43 @@ the capacity table from the interview (the roaster is the bottleneck, grinder an
 If a factory needs a constraint that no field can express, that is a schema change: add the field, a checker
 rule, and a negative test, and record it in an ADR.
 
+## Files
+
+| File | Job |
+|---|---|
+| `config_check.py` | Validates a factory config before anything else runs |
+| `model.py` | Config + orders CSV → tasks. Batching stages: loads grouped by `batch_key`, cut into full batches (last two shared equally if the last is under the minimum). Other stages: one task per order. Calendars → working windows |
+| `solve_rules.py` | Greedy list scheduler: priority, then due date; each order pulls its chain; earliest feasible start on the best resource |
+| `solve_cpsat.py` | OR-Tools CP-SAT: optional intervals, `AddCircuit` for sequence-dependent setups, cumulative people, window choice, lexicographic objective, warm-started from the rules plan |
+| `check_schedule.py` | Independent release gate: eligibility, durations, calendars, overlaps + setups, people, lags, batch size, no mixed owners, demand covered |
+| `plan.py` | CLI: build → solve → check → KPIs (exit 1 if any violation) |
+| `samples/` | Synthetic orders for both factories |
+
+## First results (sample orders, 72 h)
+
+| Factory | Solver | Late orders | Late qty, top priority | Weighted tardiness | Setup min | Check |
+|---|---|---|---|---|---|---|
+| Coffee (10 orders, 24 roast batches) | rules | 3 | 0 | 83.6 h | 60 | PASS |
+| Coffee | CP-SAT (8 s) | **1** (toll roasting, lowest priority) | 0 | **17.2 h** | **30** | PASS |
+| Beverage (8 orders, 18 syrup batches) | rules | 0 | 0 | 0 | 470 | PASS |
+| Beverage | CP-SAT (1 s) | 0 | 0 | 0 | **320** | PASS |
+
+The coffee sample needs about 57 h of roasting before its due dates, but the roaster has about 44 h, so one
+order must be late. CP-SAT chooses the toll-roasting order, which matches the owner's rule (own brands first),
+and grinds the two plain (no-cardamom) orders back to back, so the grinder is cleaned once instead of twice. The rule-based plan is still useful: it is the
+fallback and the warm start.
+
+## Known limits (v1)
+
+- Batches are formed before solving. The solver orders them but does not re-cut them.
+- With alternative people pools (`people: [packer, roaster_operator]`) the first pool is used.
+- `plan_changes` (stability against the previous plan) is skipped until there is a previous plan to compare.
+- `during: start/end` keeps a person busy for 15 minutes.
+- The rule-based solver does not look ahead, so it can break a max lag; the checker reports it.
+
 ## Next steps
 
-- [ ] `model.py`: build orders → batches → tasks from a config + an orders CSV
-- [ ] `solve_rules.py`: greedy dispatch (priority, then due date, then group by family); enough for the roastery
-- [ ] `solve_cpsat.py`: OR-Tools CP-SAT with interval variables, `NoOverlap`, setup transitions, cumulative people
-- [ ] `check_schedule.py`: independent constraint checker (release gate: 0 violations)
-- [ ] Same orders through both solvers on both configs; compare KPIs
+- [x] `model.py`, `solve_rules.py`, `solve_cpsat.py`, `check_schedule.py`, `plan.py`
+- [ ] Replan after a disruption (breakdown, rush order) with a frozen horizon and a stability objective
+- [ ] Feed the factory's real orders log (two weeks) and compare with what they actually did
+- [ ] LLM explainer: turn KPIs, the binding constraints and the late orders into an Arabic explanation

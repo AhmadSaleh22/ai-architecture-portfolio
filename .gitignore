@@ -7,3 +7,6 @@ node_modules/
 __pycache__/
 *.pyc
 data/generated/
+
+# Python env (uv)
+.venv/
