@@ -46,6 +46,7 @@ Before designing, read [`docs/00-capstone-considerations.md`](docs/00-capstone-c
 | [`adr/`](adr/) | Architecture Decision Records, one per decision (`0001-...md`) |
 | [`capstone/`](capstone/) | Final architecture PDF + slides |
 | [`data/`](data/) | Synthetic factory data generator + data contracts/baseline KPIs |
+| [`engine/`](engine/) | Industry-agnostic scheduling engine: factory config format, coffee + beverage configs, config checker |
 | [`archive/`](archive/) | Earlier scenario (ERP/HR copilot) kept as a fallback and practice lab |
 
 ## Progress
