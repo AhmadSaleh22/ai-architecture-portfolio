@@ -1,7 +1,7 @@
 """Rule-based scheduler (greedy list scheduling). Good enough for a small factory.
 
 Rules, in order:
-  1. Orders by priority, then due date. Each order pulls its whole chain (its batches first).
+  1. Orders by due day, then priority. Each order pulls its whole chain (its batches first).
   2. Each task goes to the eligible resource where it can START earliest, after its predecessors
      (+ min lag), the resource's previous task (+ sequence-dependent setup), inside a working window,
      and when the people it needs are free.
@@ -110,7 +110,8 @@ def solve(prob):
             pull(a)
         place(tid)
 
-    for o in sorted(prob.orders.values(), key=lambda o: (o.priority, o.due, o.id)):
+    # due DAY first, priority breaks ties inside the same day (pure priority starves low-priority orders)
+    for o in sorted(prob.orders.values(), key=lambda o: (o.due // 1440, o.priority, o.due, o.id)):
         chain = [tid for tid, t in prob.tasks.items() if o.id in t.orders]
         # batches first (in key order), then the order's own tasks along the route
         route = prob.cfg["products"][o.product]["route"]

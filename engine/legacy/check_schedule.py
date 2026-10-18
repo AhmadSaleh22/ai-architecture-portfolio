@@ -90,7 +90,7 @@ def check_schedule(prob, sched):
     from model import _loads
     for o in prob.orders.values():
         for s in cfg["stages"]:
-            if s.get("batching") and s["id"] in cfg["products"][o.product]["route"]:
+            if s.get("batching") and s["id"] in cfg["products"][o.product]["route"] and not prob.progress:
                 for m, q, _ in _loads(cfg, s["id"], o):
                     if need[(o.id, s["id"], m)] < q - 1e-2:
                         v.append(f"{o.id}: {m} covered {need[(o.id, s['id'], m)]:.2f} of {q:.2f}")

@@ -1,0 +1,62 @@
+# Umrah ground operator in Makkah (FICTIONAL): pilgrim groups, buses, drivers, guides and sites.
+meta:
+  domain: travel
+  name: Rihla Umrah Services (fictional)
+  timezone: Asia/Riyadh
+  horizon_days: 6
+  slot_min: 15
+
+calendars:
+  allday:  {weekly: {sun: [["00:00","00:00"]], mon: [["00:00","00:00"]], tue: [["00:00","00:00"]], wed: [["00:00","00:00"]], thu: [["00:00","00:00"]], fri: [["00:00","00:00"]], sat: [["00:00","00:00"]]}}
+  driver:  {weekly: {sun: [["05:00","23:00"]], mon: [["05:00","23:00"]], tue: [["05:00","23:00"]], wed: [["05:00","23:00"]], thu: [["05:00","23:00"]], fri: [["05:00","23:00"]], sat: [["05:00","23:00"]]}}
+  guide:   {weekly: {sun: [["07:00","21:00"]], mon: [["07:00","21:00"]], tue: [["07:00","21:00"]], wed: [["07:00","21:00"]], thu: [["07:00","21:00"]], fri: [["07:00","21:00"]], sat: [["07:00","21:00"]]}}
+  # sites close for prayers (approximate times, Dhuhr / Asr / Maghrib), open 07:00-21:00
+  site:    {weekly: {sun: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     mon: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     tue: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     wed: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     thu: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     fri: [["07:00","11:30"],["13:30","15:15"],["15:45","17:30"],["18:15","21:00"]],
+                     sat: [["07:00","12:00"],["12:45","15:15"],["15:45","17:30"],["18:15","21:00"]]}}
+
+resources:
+  # pilgrim groups: a group is in one place at a time
+  GR_ID:  {type: group, attrs: {size: 45}, calendar: allday}
+  GR_PK:  {type: group, attrs: {size: 40}, calendar: allday}
+  GR_EG:  {type: group, attrs: {size: 30}, calendar: allday}
+  GR_UK:  {type: group, attrs: {size: 20}, calendar: allday}
+  # fleet: 20 min turnaround between two different groups
+  BUS_1:  {type: vehicle, attrs: {seats: 49}, calendar: allday, setups: {by: group, default_min: 20}}
+  BUS_2:  {type: vehicle, attrs: {seats: 49}, calendar: allday, setups: {by: group, default_min: 20}}
+  VAN_1:  {type: vehicle, attrs: {seats: 25}, calendar: allday, setups: {by: group, default_min: 20}}
+  drivers: {type: driver, capacity: 2, calendar: driver}
+  # guides by language
+  G_ahmad: {type: guide, skills: [arabic, english], calendar: guide}
+  G_budi:  {type: guide, skills: [indonesian, arabic], calendar: guide}
+  G_imran: {type: guide, skills: [urdu, english], calendar: guide}
+  # sites with limited parking / visitor slots
+  ZIYARAH: {type: site, capacity: 2, calendar: site}     # Jabal al-Nour, Arafat, Mina route
+  MUSEUM:  {type: site, capacity: 1, calendar: site}     # one group at a time
+
+services:
+  umrah_package:
+    steps:
+      - {id: arrival, label: Airport -> hotel, duration: 90, primary: {type: vehicle, min: {seats: size}},
+         needs: [{type: driver}, {type: group, id_from: group}], then: {min: 720}}
+      - {id: ziyarah, label: Ziyarah tour, duration: 240, primary: {type: vehicle, min: {seats: size}},
+         needs: [{type: driver}, {type: guide, skill: $lang}, {type: site, id: ZIYARAH}, {type: group, id_from: group}],
+         then: {min: 0}}
+      - {id: museum, label: Museum visit, duration: 90, primary: {type: vehicle, min: {seats: size}},
+         needs: [{type: driver}, {type: guide, skill: $lang}, {type: site, id: MUSEUM}, {type: group, id_from: group}],
+         then: {min: 240}}
+      - {id: departure, label: Hotel -> airport, duration: 120, primary: {type: vehicle, min: {seats: size}},
+         needs: [{type: driver}, {type: group, id_from: group}]}
+
+classes:
+  package: {priority: 1, weight: 5, optional: true, reject_penalty: 10000}   # "rejected" = cannot be served with this fleet: a human must act
+
+objective:
+  - {kpi: rejected}
+  - {kpi: weighted_tardiness}
+  - {kpi: preference}
+  - {kpi: setup_minutes}

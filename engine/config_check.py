@@ -227,6 +227,8 @@ def main(paths):
     bad = 0
     for p in paths:
         cfg = yaml.safe_load(Path(p).read_text())
+        if (cfg.get("meta") or {}).get("domain", "factory") != "factory":
+            continue                       # clinic/school/travel configs use the services schema
         cfg["_path"] = p
         err, warn = check(cfg)
         print(f"\n== {cfg.get('meta', {}).get('name', p)}  [{Path(p).name}]")

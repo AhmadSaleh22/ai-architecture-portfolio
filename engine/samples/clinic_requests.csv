@@ -1,0 +1,13 @@
+id,class,service,who,release,pref_from,pref_to,fixed,attr_hygiene
+A01,routine,gp_consult,patient 1,2026-10-18T07:00,2026-10-18T08:00,2026-10-18T10:00,,
+A02,routine,gp_consult,patient 2,2026-10-18T07:00,2026-10-18T16:00,2026-10-18T19:00,,
+A03,routine,cardio_visit,patient 3,2026-10-18T07:00,2026-10-18T09:00,2026-10-18T12:00,,
+A04,urgent,ortho_visit,patient 4,2026-10-18T07:00,,,,
+A05,routine,minor_procedure,patient 5,2026-10-18T07:00,2026-10-18T09:00,2026-10-18T11:00,,infectious
+A06,routine,minor_procedure,patient 6,2026-10-18T07:00,2026-10-18T09:00,2026-10-18T11:00,,
+A07,routine,gp_consult,patient 7,2026-10-18T07:00,2026-10-18T08:00,2026-10-18T09:00,doctor=dr_hana,
+A08,routine,gp_consult,patient 8,2026-10-18T07:00,2026-10-18T08:00,2026-10-18T09:00,doctor=dr_hana,
+A09,routine,gp_consult,patient 9,2026-10-18T07:00,2026-10-18T08:00,2026-10-18T09:00,doctor=dr_hana,
+A10,routine,cardio_visit,patient 10,2026-10-18T07:00,2026-10-20T09:00,2026-10-20T12:00,,
+A11,urgent,gp_consult,patient 11,2026-10-18T07:00,,,,
+A12,routine,ortho_visit,patient 12,2026-10-18T07:00,2026-10-19T15:00,2026-10-19T18:00,,

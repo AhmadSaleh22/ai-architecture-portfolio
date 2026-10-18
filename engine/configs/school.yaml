@@ -1,0 +1,46 @@
+# Secondary school weekly timetable (FICTIONAL). Class groups are resources too:
+# a group can't be in two lessons at once, exactly like a roaster can't roast two batches.
+meta:
+  domain: school
+  name: Al-Noor Secondary School (fictional)
+  timezone: Asia/Riyadh
+  horizon_days: 5
+  periods: ["08:00", "08:50", "09:40", "10:40", "11:30", "12:20"]   # lessons start only here (45 min)
+
+calendars:
+  school:  {weekly: {sun: [["08:00","13:10"]], mon: [["08:00","13:10"]], tue: [["08:00","13:10"]], wed: [["08:00","13:10"]], thu: [["08:00","13:10"]]}}
+  parttime: {weekly: {mon: [["08:00","13:10"]], wed: [["08:00","13:10"]], thu: [["08:00","13:10"]]}}
+
+resources:
+  G10A: {type: group, attrs: {size: 28}, calendar: school}
+  G10B: {type: group, attrs: {size: 26}, calendar: school}
+  G11A: {type: group, attrs: {size: 24}, calendar: school}
+  G11B: {type: group, attrs: {size: 22}, calendar: school}
+  T_math:    {type: teacher, skills: [math], calendar: school}
+  T_phys:    {type: teacher, skills: [physics], calendar: school}
+  T_chem:    {type: teacher, skills: [chemistry], calendar: school}
+  T_eng:     {type: teacher, skills: [english], calendar: school}
+  T_arabic:  {type: teacher, skills: [arabic], calendar: school}
+  T_cs:      {type: teacher, skills: [cs], calendar: parttime}       # part-time: Mon, Wed, Thu
+  R101:   {type: room, attrs: {kind: class, seats: 30}, calendar: school}
+  R102:   {type: room, attrs: {kind: class, seats: 30}, calendar: school}
+  R103:   {type: room, attrs: {kind: class, seats: 30}, calendar: school}
+  LAB_SCI: {type: room, attrs: {kind: lab, seats: 30}, calendar: school}
+  LAB_CS:  {type: room, attrs: {kind: computer, seats: 24}, calendar: school}  # too small for G10A/G10B
+
+# weekly load: course -> group, teacher, sessions per week, room kind
+courses:
+  - {course: math,      groups: [G10A, G10B, G11A, G11B], teacher: T_math,   sessions: 5, room: class}
+  - {course: physics,   groups: [G10A, G10B, G11A, G11B], teacher: T_phys,   sessions: 3, room: lab}
+  - {course: chemistry, groups: [G10A, G10B, G11A, G11B], teacher: T_chem,   sessions: 3, room: lab}
+  - {course: english,   groups: [G10A, G10B, G11A, G11B], teacher: T_eng,    sessions: 4, room: class}
+  - {course: arabic,    groups: [G10A, G10B, G11A, G11B], teacher: T_arabic, sessions: 4, room: class}
+  - {course: cs,        groups: [G11A, G11B],             teacher: T_cs,     sessions: 2, room: computer}
+
+classes:
+  lesson: {priority: 2, weight: 1, optional: true, reject_penalty: 1000}   # every lesson must be placed if at all possible
+
+objective:
+  - {kpi: rejected}
+  - {kpi: preference}           # spread each course over the week (session i -> its own day)
+  - {kpi: plan_changes}

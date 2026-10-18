@@ -1,0 +1,66 @@
+# Outpatient polyclinic (FICTIONAL). Same core as the roastery: only this file and the requests differ.
+meta:
+  domain: clinic
+  name: Al-Waha Polyclinic (fictional)
+  timezone: Asia/Riyadh
+  horizon_days: 5
+  slot_min: 15                  # appointments start on a 15-minute grid
+
+calendars:
+  day:      {weekly: {sun: [["08:00","20:00"]], mon: [["08:00","20:00"]], tue: [["08:00","20:00"]], wed: [["08:00","20:00"]], thu: [["08:00","20:00"]]}}
+  morning:  {weekly: {sun: [["08:00","14:00"]], mon: [["08:00","14:00"]], tue: [["08:00","14:00"]], wed: [["08:00","14:00"]], thu: [["08:00","14:00"]]}}
+  evening:  {weekly: {sun: [["14:00","20:00"]], mon: [["14:00","20:00"]], tue: [["14:00","20:00"]], wed: [["14:00","20:00"]], thu: [["14:00","20:00"]]}}
+  cardio:   {weekly: {sun: [["09:00","15:00"]], tue: [["09:00","15:00"]], thu: [["09:00","15:00"]]}}
+  ortho:    {weekly: {mon: [["10:00","18:00"]], wed: [["10:00","18:00"]]}}
+
+resources:
+  # people
+  dr_hana:    {type: doctor, skills: [family, procedures], calendar: morning}
+  dr_nour:    {type: doctor, skills: [family, procedures], calendar: morning}
+  dr_omar:    {type: doctor, skills: [family], calendar: evening}
+  dr_layla:   {type: doctor, skills: [cardio], calendar: cardio}
+  dr_sami:    {type: doctor, skills: [ortho, procedures], calendar: ortho}
+  nurses:     {type: nurse, capacity: 2, calendar: day}
+  radiographer: {type: radiographer, calendar: day}
+  # rooms and equipment
+  room_1:     {type: room, attrs: {kind: consult}, calendar: day}
+  room_2:     {type: room, attrs: {kind: consult}, calendar: day}
+  proc_room:  {type: room, attrs: {kind: procedure}, calendar: day,
+               setups: {by: hygiene, default_min: 10, rules: [{from: infectious, to: "*", min: 30}]}}   # cleaning between patients
+  xray:       {type: xray, calendar: day}
+  echo:       {type: echo, calendar: day}
+
+services:
+  gp_consult:
+    steps:
+      - {id: consult, label: GP consultation, duration: 20,
+         primary: {type: room, attr: {kind: consult}}, needs: [{type: doctor, skill: family}]}
+  cardio_visit:                 # echo first, then the cardiologist reads it within 2 hours
+    steps:
+      - {id: echo, label: Echocardiogram, duration: 30, primary: {type: echo}, needs: [{type: nurse}],
+         then: {min: 0, max: 120}}
+      - {id: consult, label: Cardiology consultation, duration: 30,
+         primary: {type: room, attr: {kind: consult}}, needs: [{type: doctor, skill: cardio}]}
+  ortho_visit:                  # x-ray, then the orthopaedic surgeon within 2 hours
+    steps:
+      - {id: xray, label: X-ray, duration: 15, primary: {type: xray}, needs: [{type: radiographer}],
+         then: {min: 0, max: 120}}
+      - {id: consult, label: Orthopaedic consultation, duration: 20,
+         primary: {type: room, attr: {kind: consult}}, needs: [{type: doctor, skill: ortho}]}
+  minor_procedure:              # e.g. wound care, abscess drainage
+    steps:
+      - {id: procedure, label: Minor procedure, duration: 45, attrs: {hygiene: clean},
+         primary: {type: room, attr: {kind: procedure}},
+         needs: [{type: doctor, skill: procedures}, {type: nurse, setup_qty: 1}]}   # the nurse cleans the room
+
+classes:
+  emergency: {priority: 1, weight: 10, due_after_min: 60}
+  urgent:    {priority: 2, weight: 4,  due_after_min: 1440}
+  routine:   {priority: 3, weight: 1,  due_after_min: 7200, optional: true, reject_penalty: 100}
+
+objective:                      # lexicographic
+  - {kpi: late_qty, filter: {priority: 1}}
+  - {kpi: rejected}
+  - {kpi: weighted_tardiness}
+  - {kpi: preference}
+  - {kpi: setup_minutes}

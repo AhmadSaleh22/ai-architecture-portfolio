@@ -3,7 +3,7 @@
 The model is industry-agnostic. It turns orders into:
   * batch tasks  for stages with batching: true  (loads grouped by the stage's batch_key)
   * order tasks  for the other stages            (one task per order and stage)
-Both solvers (solve_rules.py, solve_cpsat.py) and the checker (check_schedule.py) use it.
+adapters/factory.py maps it onto the domain-agnostic core (engine/core), whose solvers and checker do the rest.
 
 Times are integer minutes from t0 (the start of the plan).
 """
@@ -63,6 +63,7 @@ class Problem:
     windows: dict            # resource -> [(start, end)]
     people_windows: dict     # pool -> [(start, end)]
     order_last: dict         # order -> its last task id
+    progress: dict = field(default_factory=dict)
 
 
 # ------------------------------------------------------------ calendar ----
@@ -172,27 +173,66 @@ def busy_span(start, end, during):
     return start, end
 
 
+def subtract(windows, blocks):
+    """Working windows minus downtime blocks."""
+    out = list(windows)
+    for b0, b1 in blocks:
+        nxt = []
+        for s, e in out:
+            if b1 <= s or b0 >= e:
+                nxt.append((s, e))
+                continue
+            if s < b0:
+                nxt.append((s, b0))
+            if b1 < e:
+                nxt.append((b1, e))
+        out = nxt
+    return out
+
+
+def route_of(cfg, o):
+    """Product route minus stages skipped for this order (e.g. no grinding for whole beans)."""
+    stages = {s["id"]: s for s in cfg["stages"]}
+    out = []
+    for st in cfg["products"][o.product]["route"]:
+        skip = stages[st].get("skip_if") or {}
+        if any(o.attrs.get(k) in v for k, v in skip.items()):
+            continue
+        out.append(st)
+    return out
+
+
 # --------------------------------------------------------------- build ----
 def _ts(s, t0):
     return int((datetime.fromisoformat(s) - t0).total_seconds() // 60)
+
+
+def order_from_row(row, cfg, t0):
+    """One order from a dict with the CSV columns (order_id, class, customer, product, variant, qty,
+    release, due, and optional roast_level / form that override the product's attributes)."""
+    oc = cfg["order_classes"][row["class"]]
+    p = cfg["products"][row["product"]]
+    attrs = dict(p.get("attributes", {}))
+    for k in ("roast_level", "form"):
+        if row.get(k):
+            attrs[k] = row[k]
+    v = row.get("variant") or ""
+    if v:
+        attrs.update(p["variants"][v].get("attributes", {}))
+    return Order(id=row["order_id"], cls=row["class"], product=row["product"], qty=float(row["qty"]),
+                 due=_ts(row["due"], t0), release=max(0, _ts(row["release"], t0)) if row.get("release") else 0,
+                 variant=v, customer=row.get("customer", ""), priority=oc["priority"],
+                 weight=oc["weight"], attrs=attrs)
 
 
 def load_orders(path, cfg, t0):
     orders = {}
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            oc = cfg["order_classes"][row["class"]]
-            p = cfg["products"][row["product"]]
-            attrs = dict(p.get("attributes", {}))
-            v = row.get("variant") or ""
-            if v:
-                attrs.update(p["variants"][v].get("attributes", {}))
-            o = Order(id=row["order_id"], cls=row["class"], product=row["product"], qty=float(row["qty"]),
-                      due=_ts(row["due"], t0), release=max(0, _ts(row["release"], t0)) if row.get("release") else 0,
-                      variant=v, customer=row.get("customer", ""), priority=oc["priority"],
-                      weight=oc["weight"], attrs=attrs)
-            if oc.get("min_qty") and o.qty < oc["min_qty"]:
-                print(f"  note: {o.id} qty {o.qty} below class minimum {oc['min_qty']}")
+            o = order_from_row(row, cfg, t0)
+            mq = cfg["order_classes"][o.cls].get("min_qty")
+            if mq and o.qty < mq:
+                print(f"  note: {o.id} qty {o.qty} below class minimum {mq}")
             orders[o.id] = o
     return orders
 
@@ -230,10 +270,15 @@ def _loads(cfg, stage, o):
     return out
 
 
-def build(cfg, orders_csv, t0):
+def build(cfg, orders_csv, t0, progress=None, downtime=None, orders=None):
     t0 = datetime.fromisoformat(t0) if isinstance(t0, str) else t0
     horizon = cfg["meta"].get("horizon_days", 3) * 1440 * 2
-    orders = load_orders(orders_csv, cfg, t0)
+    """progress: {order_id: {"covered": {(stage, material): qty}, "done": set(stages)}} for replanning.
+    downtime: {resource_id: [(start_min, end_min)]} removed from the working windows.
+    orders: pass already-loaded orders instead of a CSV path."""
+    progress = progress or {}
+    if orders is None:
+        orders = load_orders(orders_csv, cfg, t0)
     stages = {s["id"]: s for s in cfg["stages"]}
     res = cfg["resources"]
     tasks, preds, order_last = {}, [], {}
@@ -249,9 +294,12 @@ def build(cfg, orders_csv, t0):
             continue
         groups = defaultdict(list)
         for o in orders.values():
-            if s["id"] not in cfg["products"][o.product]["route"]:
+            if s["id"] not in route_of(cfg, o) or s["id"] in progress.get(o.id, {}).get("done", ()):
                 continue
             for m, q, mattrs in _loads(cfg, s["id"], o):
+                q -= progress.get(o.id, {}).get("covered", {}).get((s["id"], m), 0.0)
+                if q <= 0.05:
+                    continue
                 attrs = {**o.attrs, **mattrs, "owner_id": o.customer if cfg["order_classes"][o.cls]["owner"] == "customer" else "own"}
                 key = tuple(attrs.get(k) for k in s.get("batch_key", []))
                 groups[key].append((o, m, q, attrs))
@@ -289,17 +337,20 @@ def build(cfg, orders_csv, t0):
 
     # 2. order tasks for non-batching stages, chained along the route
     for o in orders.values():
-        route = cfg["products"][o.product]["route"]
+        route = [st for st in route_of(cfg, o) if st not in progress.get(o.id, {}).get("done", ())]
         prev = []                                  # task ids the next stage waits for
         prev_stage = None
         for st in route:
             if stages[st].get("batching"):
                 cur = batch_of_order[(o.id, st)]
+                if not cur:                       # everything for this stage is already roasted
+                    continue
             else:
                 tid = f"{o.id}-{st}"
                 qty = o.qty
                 if cfg["products"][o.product].get("qty_is") == "input":   # downstream sees the output weight
-                    qty = round(o.qty * (1 - sum(_loss(cfg, x, o.attrs) for x in route[:route.index(st)])), 3)
+                    full = cfg["products"][o.product]["route"]
+                    qty = round(o.qty * (1 - sum(_loss(cfg, x, o.attrs) for x in full[:full.index(st)])), 3)
                 tasks[tid] = Task(id=tid, stage=st, kind="order", qty=qty, attrs=dict(o.attrs),
                                   eligible=eligible(st, o.attrs), orders=[o.id], release=o.release)
                 cur = [tid]
@@ -310,16 +361,20 @@ def build(cfg, orders_csv, t0):
                         if (a, b, lag.get("min_lag_min") or 0, lag.get("max_lag_min")) not in preds:
                             preds.append((a, b, lag.get("min_lag_min") or 0, lag.get("max_lag_min")))
             prev, prev_stage = cur, st
-        order_last[o.id] = prev[-1] if len(prev) == 1 else prev   # list if the route ends in batches
+        if prev:
+            order_last[o.id] = prev[-1] if len(prev) == 1 else prev   # list if the route ends in batches
 
-    windows = {rid: calendar_windows(cfg["calendars"][r["calendar"]], t0, horizon, r.get("startup_min", 0))
+    windows = {rid: subtract(calendar_windows(cfg["calendars"][r["calendar"]], t0, horizon, r.get("startup_min", 0)),
+                             (downtime or {}).get(rid, []))
                for rid, r in res.items()}
     pw = {pid: calendar_windows(cfg["calendars"][p["calendar"]], t0, horizon) for pid, p in cfg["people"].items()}
-    return Problem(cfg, t0, horizon, orders, tasks, preds, windows, pw, order_last)
+    return Problem(cfg, t0, horizon, orders, tasks, preds, windows, pw, order_last, progress)
 
 
 def order_completion(prob, sched, oid):
-    last = prob.order_last[oid]
+    last = prob.order_last.get(oid)
+    if last is None:
+        return 0
     ids = last if isinstance(last, list) else [last]
     return max(sched[i]["end"] for i in ids)
 

@@ -1,24 +1,74 @@
-# Scheduling engine: one config format for many factories
+# Scheduling engine: one core, many domains
 
-The engine is not written for coffee or for beverages. A factory is described in a **config file**; the
-same model builder, solver and checker run on any config. This folder holds step 1: the config format,
-two filled examples, and a checker.
+The engine does not know about coffee, patients, lessons or buses. A small **core** schedules
+*tasks* on *resources* for *jobs*; a thin **adapter** per domain translates the domain's own world into
+that vocabulary. The same solvers and the same independent checker run a roastery, a beverage plant,
+an outpatient clinic, a school timetable and an Umrah ground operator.
 
 ```bash
 uv sync                                          # once, from the repo root (pyproject.toml + uv.lock)
-uv run python engine/config_check.py             # checks every file in configs/, exits 1 on errors
+uv run python -m unittest discover engine/tests  # 23 tests: parity, checker, 5 domains (~15 s)
+
+# factories
 uv run python engine/plan.py engine/configs/coffee_roastery.yaml engine/samples/coffee_orders.csv \
-    --start 2026-10-18T08:00 --solver rules      # or --solver cpsat; prints the plan, KPIs, check result
-uv run python -m unittest discover engine/tests  # model + checker tests
+    --start 2026-10-18T08:00 --solver cpsat      # or rules; prints the plan, KPIs, check result
+uv run python engine/backtest.py engine/samples/factory_log_example.xlsx       # factory vs engine, day by day
+uv run python engine/import_excel.py engine/samples/factory_log_example.xlsx   # read the factory log + calibration
+uv run python engine/config_check.py             # validates the factory configs
+
+# other domains: plan -> offer / disruption -> repair
+uv run python engine/demos/clinic_day.py         # book a week, offer 3 slots on WhatsApp, doctor goes home sick
+uv run python engine/demos/school_week.py        # weekly timetable, teacher absent on Tuesday
+uv run python engine/demos/umrah_week.py         # pilgrim groups, buses, guides, a flight lands 5 h late
 ```
 
-| Config | Industry | Shape of the problem |
-|---|---|---|
-| [`configs/coffee_roastery.yaml`](configs/coffee_roastery.yaml) | Coffee roasting | Hybrid flow shop with batching, customer-owned material that must not mix, asymmetric grinder cleaning, operator always present, shelf life by season |
-| [`configs/nahda_riyadh.yaml`](configs/nahda_riyadh.yaml) | Beverage bottling | Syrup batching + parallel filling lines (`Rm \| r_j, s_jk, M_j \| Σ w_j T_j`), CIP changeovers, QA release, max hold time |
+## Core + adapters
 
-The coffee config is calibrated from interviews with a real roastery, but the name is fictional and no
-customer, order or price list is stored. The beverage config matches [`../data/generator.py`](../data/generator.py).
+```
+engine/
+  core/                         knows nothing about any domain
+    model.py      Resource · Requirement · Task · Job · Problem, setups, calendar helpers
+    calendar.py   weekly calendars -> working windows
+    greedy.py     fast list scheduler (any size), also the warm start and the fallback
+    cpsat.py      OR-Tools CP-SAT: circuits for setups, NoOverlap / Cumulative, lexicographic objectives
+    modes.py      plan · offer (k best options for a new request) · repair (replan, keep the old plan)
+    check.py      independent release gate
+    kpi.py        job-level KPIs, the same for every domain
+  adapters/
+    factory.py    orders -> recipe -> batches -> tasks   (domain logic stays in model.py)
+    services.py   service catalogue in YAML: clinics, schools, travel, any "book people + rooms + equipment"
+    school.py     weekly course load -> lesson requests
+    travel.py     pilgrim groups + flights -> itinerary requests
+```
+
+| Core idea | Roastery | Clinic | School | Umrah operator |
+|---|---|---|---|---|
+| **Resource** (calendar + capacity) | roaster, grinder, packer | doctor, room, x-ray, nurses ×2 | teacher, room, **class group** | bus, drivers ×2, guide, group, site (×2 / ×1) |
+| **Task needs several resources at once** | roaster + operator | room + doctor (+ nurse) | room + teacher + group | vehicle + driver + guide + site + group |
+| **Skills / filters** | eligible line per format | `skill: cardio`, requested doctor | room kind + seats ≥ group size | seats ≥ group size, guide speaks `$lang` |
+| **Sequence-dependent setup** | cardamom → plain: 30 min | infectious → anyone: 30 min cleaning | | 20 min bus turnaround between groups |
+| **Lags** | rest ≥ 60 min | x-ray → consult ≤ 2 h | | tour ≥ 12 h after arrival |
+| **Hard limits** | working hours | doctor's days | periods only | land + 4 h, airport 3 h before the flight, prayer closures |
+| **Optional job (may be refused)** | | routine booking | (flagged if unplaceable) | group the fleet cannot serve |
+| **Soft preference** | | patient's preferred time | spread each course over the week | tour in the morning |
+| **Repair** | breakdown, rush order | doctor goes home sick, emergency | teacher absent | flight +5 h |
+
+## Results of the demos (fictional data)
+
+| Domain | Greedy | CP-SAT | Repair after the disruption |
+|---|---|---|---|
+| Roastery (10 orders) | 1 late, 60 min cleaning | 1 late, **30 min** cleaning | backtest: 26 vs 14 on time (see below) |
+| Clinic (12 requests) | all booked, far from preferences | all booked, **0 min** from preferred times, infectious patient last (10 min cleaning, not 30) | sick doctor + emergency: emergency treated at 09:00, **4 appointments moved**, the rest untouched; a patient who asked for Dr Hana stays with Dr Hana (next day) |
+| School (80 lessons/week) | 58 / 80 placed | **80 / 80** placed, courses spread over the week | teacher absent: **only her 4 lessons move** |
+| Umrah (4 groups) | 2 / 4 served | **4 / 4** served | flight +5 h: 2–3 activities shift, check passes |
+
+Greedy is instant and good for bookings one at a time; CP-SAT is what makes tight timetables feasible.
+Every result above passes the same checker.
+
+## Factory details
+
+The factory configs are the first domain; their results are unchanged by the rewrite
+(`tests/test_core.py::TestFactoryParity`). The old factory-only solvers are kept in `legacy/`.
 
 ## Pipeline
 
@@ -74,25 +124,47 @@ rule, and a negative test, and record it in an ADR.
 |---|---|
 | `config_check.py` | Validates a factory config before anything else runs |
 | `model.py` | Config + orders CSV → tasks. Batching stages: loads grouped by `batch_key`, cut into full batches (last two shared equally if the last is under the minimum). Other stages: one task per order. Calendars → working windows |
-| `solve_rules.py` | Greedy list scheduler: priority, then due date; each order pulls its chain; earliest feasible start on the best resource |
-| `solve_cpsat.py` | OR-Tools CP-SAT: optional intervals, `AddCircuit` for sequence-dependent setups, cumulative people, window choice, lexicographic objective, warm-started from the rules plan |
-| `check_schedule.py` | Independent release gate: eligibility, durations, calendars, overlaps + setups, people, lags, batch size, no mixed owners, demand covered |
+| `core/greedy.py`, `core/cpsat.py`, `core/check.py` | The solvers and checker (were `solve_rules.py`, `solve_cpsat.py`, `check_schedule.py`, now in `legacy/`) |
+| `adapters/factory.py` | Maps the factory model onto the core; adds batch size, no-mixing and coverage checks |
 | `plan.py` | CLI: build → solve → check → KPIs (exit 1 if any violation) |
+| `import_excel.py` | Reads the factory's daily log (Arabic Excel): orders → engine orders, batches → calibration of time and loss, events → downtime. Reports every unreadable row |
+| `backtest.py` | Replays the log day by day: every morning the engine sees only the orders received so far and today's breakdowns, plans, executes today, replans tomorrow. Compares with what the factory did |
 | `samples/` | Synthetic orders for both factories |
 
 ## First results (sample orders, 72 h)
 
 | Factory | Solver | Late orders | Late qty, top priority | Weighted tardiness | Setup min | Check |
 |---|---|---|---|---|---|---|
-| Coffee (10 orders, 24 roast batches) | rules | 3 | 0 | 83.6 h | 60 | PASS |
-| Coffee | CP-SAT (8 s) | **1** (toll roasting, lowest priority) | 0 | **17.2 h** | **30** | PASS |
+| Coffee (10 orders, 24 roast batches) | rules (due day, then priority) | 1 | 0 | 17.2 h | 60 | PASS |
+| Coffee | CP-SAT (7 s) | 1 (toll roasting, lowest priority) | 0 | 17.2 h | **30** | PASS |
 | Beverage (8 orders, 18 syrup batches) | rules | 0 | 0 | 0 | 470 | PASS |
 | Beverage | CP-SAT (1 s) | 0 | 0 | 0 | **320** | PASS |
 
 The coffee sample needs about 57 h of roasting before its due dates, but the roaster has about 44 h, so one
 order must be late. CP-SAT chooses the toll-roasting order, which matches the owner's rule (own brands first),
-and grinds the two plain (no-cardamom) orders back to back, so the grinder is cleaned once instead of twice. The rule-based plan is still useful: it is the
+and grinds the two plain (no-cardamom) orders back to back, so the grinder is cleaned once instead of twice. With pure "priority first" the rules plan had 3 late orders (83.6 h); ordering by due day, then priority, fixed
+that, because pure priority starves low-priority orders. The rule-based plan is the
 fallback and the warm start.
+
+## Backtest on the example log (invented data, real parameters)
+
+`samples/factory_log_example.xlsx` is two invented weeks (3–15 Oct) built with the roastery's real recipes,
+batch sizes, times, losses and shifts. The "factory" side was simulated the way they work today: first come
+first served, shops first in a crunch, each order roasted in its own batches, plus a one-day drum-roller breakdown.
+
+| | Factory (log) | Engine, rules | Engine, CP-SAT |
+|---|---|---|---|
+| On time | 14 | 26 | 26 |
+| Late, delivered | 12 | 3 | 3 |
+| Open and past due at the end | 4 | 1 | 1 |
+| Avg roast batch (kg green, max 14) | 10.4 | 12.0 | 12.1 |
+| Roaster busy (h) | 158 | 175 | 176 |
+
+What it shows: pooling the same origin across orders fills the drum (10.4 → 12 kg per batch), so the same
+roaster serves more orders. Shops go from 5 late to 0. What it also shows: the engine plans just in time, so it
+finished the export order later than the factory did, and the unannounced breakdown then pushed it past its due
+date. A safety buffer before due dates is a parameter to add. These numbers prove the mechanism only; the saving
+must be measured on the real log.
 
 ## Known limits (v1)
 
@@ -105,6 +177,9 @@ fallback and the warm start.
 ## Next steps
 
 - [x] `model.py`, `solve_rules.py`, `solve_cpsat.py`, `check_schedule.py`, `plan.py`
-- [ ] Replan after a disruption (breakdown, rush order) with a frozen horizon and a stability objective
-- [ ] Feed the factory's real orders log (two weeks) and compare with what they actually did
+- [x] Domain-agnostic core; clinic, school and travel adapters; offer and repair modes
+- [x] Replan after a disruption with a frozen horizon and a stability objective (`core/modes.py`)
+- [x] Excel import + day-by-day backtest (`import_excel.py`, `backtest.py`)
+- [ ] Run the backtest on the factory's real two weeks
+- [ ] Safety buffer before due dates; use roasted stock left over from padding
 - [ ] LLM explainer: turn KPIs, the binding constraints and the late orders into an Arabic explanation

@@ -81,6 +81,7 @@ stages:
     after: {min_lag_min: 0, max_lag_min: null}
   - id: grind
     batching: false
+    skip_if: {form: [bean]}                      # whole-bean orders are not ground
     after: {min_lag_min: 30, max_lag_min: 1440}  # rest 30 min before packing; pack the same day
   - id: pack
     batching: false
@@ -202,6 +203,7 @@ shelf_life_days:                       # roasted coffee in storage [min, max]
 order_classes:
   shop:          {priority: 1, weight: 5, min_qty: 20,  owner: own,      lead_time_days: 1,   holding_cost_per_day: 0}
   supermarket:   {priority: 1, weight: 5, min_qty: 20,  owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
+  cafe:          {priority: 2, weight: 3, min_qty: 20,  owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
   online:        {priority: 2, weight: 2, min_qty: 0,   owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
   export:        {priority: 2, weight: 3, min_qty: 100, owner: own,      lead_time_days: 7,   holding_cost_per_day: 0}
   toll_roasting: {priority: 3, weight: 1, min_qty: 100, owner: customer, lead_time_days: 3,   holding_cost_per_day: 50,
