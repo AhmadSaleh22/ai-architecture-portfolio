@@ -1,32 +1,21 @@
-# NNNN. <Short title of the decision>
+# NNNN. Title
 
-- **Status:** Proposed | Accepted | Superseded by [NNNN](NNNN-...md)
-- **Date:** YYYY-MM-DD
-- **Deciders:** Ahmad Saleh
+Status: proposed / accepted / replaced by NNNN
+Date:
 
 ## Context
 
-<!-- The forces at play: requirements, constraints, numbers. What problem needs a decision? -->
+What's the problem, and what limits the options?
 
-## Options considered
+## Options
 
-### Option A: ...
-- Pros:
-- Cons:
-- Evidence (cost, latency, eval score):
-
-### Option B: ...
-- Pros:
-- Cons:
-- Evidence:
+1.
+2.
 
 ## Decision
 
-We will ... because ...
+What we chose, and why.
 
 ## Consequences
 
-- **Positive:**
-- **Negative / trade-offs:**
-- **What we'll monitor:**
-- **Revisit if:**
+What gets easier, what gets harder, and when we should look at this again.

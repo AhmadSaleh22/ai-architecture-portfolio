@@ -1,39 +1,22 @@
-# 01 · Framing the system
+# Session 1 – Architecture views, steps and process
 
-> Session 1: Architecture Views, Steps and Process · Sun 18 Oct 2026
+18 Oct 2026
 
-## Notes from the session
+## Notes
 
--
 
-## Problem statement
+## Problem
 
-<!-- One paragraph: who, what pain, why now. -->
 
-## Stakeholders & users
+## Stakeholders
 
-| Stakeholder | Interest / concern |
-|---|---|
-| | |
 
-## Quality targets (measurable)
+## Quality goals
 
-| Attribute | Target | How measured |
-|---|---|---|
-| Answer correctness | | |
-| Latency (p95) | | |
-| Cost per conversation | | |
-| Availability | | |
-| Escalation / handoff rate | | |
 
-## Scope
+## In scope / out of scope
 
-**In (v1):**
 
-**Out (explicitly):**
+## Open questions
 
-## Constraints & assumptions
-
-## Risks & open questions
-
-## Assignment / takeaways
+- Is manufacturing OK as a capstone domain?
