@@ -34,7 +34,7 @@ capstone/       final architecture PDF + slides
 ## Progress
 
 - [x] Repo
-- [ ] Session 1 – Architecture views, steps and process (18 Oct)
+- [x] Session 1 – Architecture views, steps and process (18 Oct) · [notes](docs/01-framing.md)
 - [ ] Session 2 – AI system building blocks (25 Oct)
 - [ ] Session 3 – LLM and RAG architecture (1 Nov)
 - [ ] Midpoint quiz + capstone part 1 (14 Nov)
@@ -42,3 +42,5 @@ capstone/       final architecture PDF + slides
 - [ ] Session 5 – Security, governance, evals (22 Nov)
 - [ ] Session 6 – Case studies (29 Nov)
 - [ ] Capstone (13 Dec)
+
+Next: Session 1 quiz, then Session 2 on 25 Oct.
