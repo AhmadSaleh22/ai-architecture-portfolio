@@ -12,7 +12,6 @@ When something goes wrong on the floor (a machine breaks, materials arrive late,
 
 The LLM doesn't build the schedule. A scheduling solver does that, and normal code checks the result against the factory's rules. The LLM explains the result and answers the planner's questions.
 
-Still a draft. I'm confirming the domain with the instructor in Session 1.
 
 ## Assumptions
 
@@ -29,6 +28,7 @@ docs/           one file per session: 01-framing.md, 02-building-blocks.md ...
 diagrams/       exported PNG/SVG + source files
 adr/            one file per decision: 0001-model-hosting.md ...
 capstone/       final architecture PDF + slides
+poc/            small working proof of concept of the scheduling part (code, made-up data)
 ```
 
 ## Progress

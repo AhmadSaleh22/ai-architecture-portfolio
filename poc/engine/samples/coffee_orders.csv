@@ -1,0 +1,11 @@
+order_id,class,customer,product,variant,qty,release,due
+O01,shop,shop-A,blend_190,,25,2026-10-18T08:00,2026-10-19T12:00
+O02,shop,shop-B,blend_250,,20,2026-10-18T08:00,2026-10-19T12:00
+O03,supermarket,market-C,blend_190,,30,2026-10-18T08:00,2026-10-20T12:00
+O04,toll_roasting,toll-X,toll_roast,,100,2026-10-18T08:00,2026-10-20T18:00
+O05,online,web,blend_300,,8,2026-10-18T08:00,2026-10-19T18:00
+O06,shop,shop-D,blend_190,no_cardamom,20,2026-10-18T08:00,2026-10-19T18:00
+O07,shop,shop-A,saudi_green,,20,2026-10-18T08:00,2026-10-20T12:00
+O08,supermarket,market-E,blend_250,,60,2026-10-18T08:00,2026-10-22T12:00
+O09,online,web,blend_250,no_cardamom,6,2026-10-18T12:00,2026-10-20T18:00
+O10,shop,shop-B,blend_300,,20,2026-10-18T12:00,2026-10-20T12:00

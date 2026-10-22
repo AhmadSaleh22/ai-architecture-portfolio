@@ -1,0 +1,159 @@
+# Factory config: one beverage plant of the fictional Nahda Beverages.
+# Values match data/generator.py (families, changeover matrix, line types), so the engine
+# can be tested on the synthetic orders and disruptions.
+schema_version: 1
+
+meta:
+  id: nahda-p01
+  name: Nahda Riyadh (fictional)
+  industry: beverage_bottling
+  calibration: "Synthetic, consistent with data/generator.py seed 42."
+  units: {time: min, qty: unit}       # bottles / cans
+  currency: SAR
+  timezone: Asia/Riyadh
+  horizon_days: 3
+
+seasons:
+  ramadan: []                          # by Hijri calendar; filled per year
+  summer: [5, 6, 7, 8, 9]
+
+calendars:
+  three_shifts:
+    weekly:
+      sun: [["06:00", "06:00"]]        # 24 h
+      mon: [["06:00", "06:00"]]
+      tue: [["06:00", "06:00"]]
+      wed: [["06:00", "06:00"]]
+      thu: [["06:00", "06:00"]]
+    closed_dates: ["2026-09-23"]       # Saudi National Day
+  day_shift:
+    weekly:
+      sun: [["07:00", "15:00"]]
+      mon: [["07:00", "15:00"]]
+      tue: [["07:00", "15:00"]]
+      wed: [["07:00", "15:00"]]
+      thu: [["07:00", "15:00"]]
+
+attributes:
+  family: [cola, orange, lemon, water, energy]
+  format: [PET, CAN, GLASS]
+  size_ml: [250, 330, 500, 1500]
+  owner: [own]
+
+people:
+  line_crew:   {count: 3, calendar: three_shifts, skills: [run_line, changeover]}   # one crew per line per shift
+  qa_tech:     {count: 1, calendar: three_shifts, skills: [release_syrup]}
+  cip_team:    {count: 1, calendar: three_shifts, skills: [cip]}
+
+consumables:
+  co2:         {unit: kg, unit_cost: 1.2, refill_lead_min: 1440, alert_at_remaining: 0.2}
+
+materials:
+  conc_cola:   {kind: concentrate, owner: own}
+  conc_orange: {kind: concentrate, owner: own}
+  conc_lemon:  {kind: concentrate, owner: own}
+  conc_energy: {kind: concentrate, owner: own}
+  treated_water: {kind: water, owner: own}
+
+stages:
+  - id: syrup
+    batching: true
+    batch_key: [family]
+    after: {min_lag_min: 30, max_lag_min: 1440}   # QA release first; syrup must be filled within 24 h
+  - id: fill
+    batching: false                    # continuous run; lot size is the work order
+
+resources:
+  syrup_tank_1:
+    stage: syrup
+    calendar: three_shifts
+    capacity: {min: 5000, max: 20000, unit: litre}
+    duration: {fixed_min: 90, per_unit_min: 0}
+    needs:
+      - {people: qa_tech, qty: 1, during: end}      # release sample at the end
+    setups: {by: family, default_min: 30, rules: [{from: same, to: same, min: 0}]}
+  syrup_tank_2:
+    stage: syrup
+    calendar: three_shifts
+    capacity: {min: 5000, max: 20000, unit: litre}
+    duration: {fixed_min: 90, per_unit_min: 0}
+    needs:
+      - {people: qa_tech, qty: 1, during: end}
+    setups: {by: family, default_min: 30, rules: [{from: same, to: same, min: 0}]}
+
+  line_pet:
+    stage: fill
+    calendar: three_shifts
+    eligible: {format: [PET]}
+    duration: {fixed_min: 0, per_unit_min: 0.0029}  # 24,000 u/h nominal x 0.86 actual
+    needs:
+      - {people: line_crew, qty: 1, during: whole_run}
+    consumes:
+      - {consumable: co2, per_unit_by: null, values: {any: 0.008}}
+    setups: &filler_setups
+      by: [family, size_ml]
+      default_min: 45                   # flavour change = rinse
+      rules:
+        - {from: same,   to: same,   min: 0}
+        - {from: cola,   to: "*",    min: 90, people: 1, crew: cip_team}   # full CIP
+        - {from: "*",    to: energy, min: 90, people: 1, crew: cip_team}
+        - {from: energy, to: "*",    min: 90, people: 1, crew: cip_team}
+      extra_if_changed: {size_ml: 40}   # size change adds 40 min
+    failure_modes: &filler_failures
+      - {id: filler_valve,  repair_min: 120, with_spare_min: 60,  degraded_ok: false}
+      - {id: labeler_glue,  repair_min: 45,  with_spare_min: 45,  degraded_ok: false}
+      - {id: shrink_tunnel, repair_min: 90,  with_spare_min: 90,  degraded_ok: true}
+  line_can:
+    stage: fill
+    calendar: three_shifts
+    eligible: {format: [CAN]}
+    duration: {fixed_min: 0, per_unit_min: 0.0014}  # 48,000 u/h
+    needs:
+      - {people: line_crew, qty: 1, during: whole_run}
+    consumes:
+      - {consumable: co2, per_unit_by: null, values: {any: 0.006}}
+    setups: *filler_setups
+    failure_modes: *filler_failures
+  line_glass:
+    stage: fill
+    calendar: three_shifts
+    eligible: {format: [GLASS]}
+    duration: {fixed_min: 0, per_unit_min: 0.0042}  # 16,000 u/h
+    needs:
+      - {people: line_crew, qty: 1, during: whole_run}
+    setups: *filler_setups
+    failure_modes: *filler_failures
+    max_setups_per_shift: {size_ml: 1}  # planning rule: one format/size change per shift on glass
+
+products:
+  cola_pet_500:    {route: [syrup, fill], attributes: {family: cola,   format: PET,   size_ml: 500},  recipe: [{material: conc_cola,   share: 0.18}, {material: treated_water, share: 0.82}]}
+  cola_can_330:    {route: [syrup, fill], attributes: {family: cola,   format: CAN,   size_ml: 330},  recipe: [{material: conc_cola,   share: 0.18}, {material: treated_water, share: 0.82}]}
+  orange_pet_1500: {route: [syrup, fill], attributes: {family: orange, format: PET,   size_ml: 1500}, recipe: [{material: conc_orange, share: 0.20}, {material: treated_water, share: 0.80}]}
+  lemon_glass_250: {route: [syrup, fill], attributes: {family: lemon,  format: GLASS, size_ml: 250},  recipe: [{material: conc_lemon,  share: 0.18}, {material: treated_water, share: 0.82}]}
+  energy_can_250:  {route: [syrup, fill], attributes: {family: energy, format: CAN,   size_ml: 250},  recipe: [{material: conc_energy, share: 0.22}, {material: treated_water, share: 0.78}]}
+  water_pet_500:   {route: [fill],        attributes: {family: water,  format: PET,   size_ml: 500},  recipe: [{material: treated_water, share: 1.0}]}
+
+stage_conversion:                      # qty of the upstream stage per finished unit
+  syrup: {per_unit_from: size_ml, factor: 0.001}   # litres = size_ml / 1000
+
+yield_loss:
+  fill: {by: null, values: {any: 0.01}}             # 1 % scrap
+
+shelf_life_days:
+  any: [180, 270]
+  note: "Not a planning constraint at 72 h; kept for completeness."
+
+order_classes:
+  normal:   {priority: 3, weight: 1,  min_qty: 0, owner: own, lead_time_days: 3}
+  high:     {priority: 2, weight: 3,  min_qty: 0, owner: own, lead_time_days: 2}
+  critical: {priority: 1, weight: 10, min_qty: 0, owner: own, lead_time_days: 1}
+
+compatibility:
+  - {rule: same, key: family, scope: batch}
+  - {rule: eligible, key: format, scope: resource}
+
+objective:
+  - {kpi: late_qty,           filter: {priority: 1}}
+  - {kpi: weighted_tardiness}
+  - {kpi: plan_changes,       filter: {frozen_horizon_min: 120}}
+  - {kpi: setup_minutes}

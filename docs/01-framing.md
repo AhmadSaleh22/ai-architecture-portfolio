@@ -45,6 +45,15 @@ The session quiz is required for the certificate.
 
 ### Problem
 
+When something goes wrong on a production line (a machine breaks, material arrives late, a rush order comes in), the planner rebuilds the plan by hand. That takes 30 to 90 minutes, across several systems and phone calls, and the result depends on who is on shift. Meanwhile orders slip: about 1 in 5 critical orders finishes late (baseline from the synthetic data, to be confirmed with real data).
+
+Who feels it: planners (time pressure, blame when it goes wrong), shift supervisors (plans change mid-shift), sales (hear about delays from the customer), plant managers (overtime, missed deliveries).
+
+Success in 6 months (assumed until measured):
+- time from disruption to an approved plan: 30–90 min → under 10 min
+- critical orders late: ~20% → under 5%
+- zero plans that break a hard rule reach the floor
+
 
 ### Stakeholders
 
@@ -57,6 +66,5 @@ The session quiz is required for the certificate.
 
 ## Open questions
 
-- Is manufacturing OK as a capstone domain?
 - "In-country in transit": does traffic have to stay inside the country, or only be encrypted? This decides whether an LLM API hosted abroad is allowed at all.
 - How is CSAT from text feedback measured in practice, and what's the equivalent for planners?

@@ -1,0 +1,221 @@
+# Factory config: small coffee roastery (Egypt).
+# FICTIONAL name. Numbers are calibrated from interviews with a real roastery,
+# rounded, and contain no customer names or real orders. Real data stays out of this repo.
+schema_version: 1
+
+meta:
+  id: bunna-roastery
+  name: Bunna Roastery (fictional)
+  industry: coffee_roasting
+  calibration: "Interview rounds 1-8 (Oct 2026). Values marked ASSUMPTION are not confirmed yet."
+  units: {time: min, qty: kg}
+  currency: EGP
+  timezone: Africa/Cairo
+  horizon_days: 3                      # plan 72 h, re-plan when an order or breakdown arrives
+
+seasons:                               # used by shelf life and demand
+  winter: [11, 12, 1, 2, 3]
+  summer: [4, 5, 6, 7, 8, 9, 10]
+
+calendars:
+  two_shifts:                          # up to 2 am today; "end < start" means it crosses midnight
+    weekly:
+      sat: [["08:00", "02:00"]]
+      sun: [["08:00", "02:00"]]
+      mon: [["08:00", "02:00"]]
+      tue: [["08:00", "02:00"]]
+      wed: [["08:00", "02:00"]]
+      thu: [["08:00", "02:00"]]
+    closed_dates: []                   # Eid days etc. are added per year
+  day_shift:
+    weekly:
+      sat: [["08:00", "16:00"]]
+      sun: [["08:00", "16:00"]]
+      mon: [["08:00", "16:00"]]
+      tue: [["08:00", "16:00"]]
+      wed: [["08:00", "16:00"]]
+      thu: [["08:00", "16:00"]]
+
+attributes:                            # what batching, setups and compatibility depend on
+  origin: [robusta, brazil, colombia, india, saudi_green, customer_own]
+  roast_level: [light, medium, dark]
+  flavor: [plain, cardamom, spiced]    # spiced = Saudi green coffee additives (cardamom, saffron, clove)
+  form: [bean, ground]
+  owner: [own, customer]
+
+people:
+  roaster_operator:
+    count: 1                           # people on duty at the same time (one per shift); a second roaster needs a second one
+    calendar: two_shifts
+    skills: [roast, grind, pack]
+  packer:
+    count: 1                           # a separate person from the roaster operator; same hours (round 8)
+    calendar: two_shifts
+    skills: [blend, grind, pack]
+
+consumables:
+  gas_cylinder:
+    unit: cylinder
+    unit_cost: 100
+    stock: 2                           # one in use + one spare
+    swap_min: 10                       # fitting the spare
+    refill_lead_min: 1440              # a new cylinder takes a full day
+    alert_when: on_last_unit           # spare fitted -> order a new one now
+
+materials:
+  green_robusta:    {origin: robusta,     owner: own, unit_cost: null}
+  green_brazil:     {origin: brazil,      owner: own, unit_cost: null}
+  green_colombia:   {origin: colombia,    owner: own, unit_cost: null}
+  green_india:      {origin: india,       owner: own, unit_cost: null}
+  green_saudi:      {origin: saudi_green, owner: own, unit_cost: null}
+  cardamom:         {kind: additive,      owner: own, unit_cost: null}
+  "@customer":      {origin: customer_own, owner: customer}   # toll roasting: beans belong to the order's customer
+
+stages:
+  - id: roast
+    batching: true
+    batch_key: [origin, roast_level, owner_id]   # one origin per batch; never mix two owners
+    after: {min_lag_min: 60, max_lag_min: null}  # rest 1-2 h before grinding
+  - id: blend
+    batching: false
+    after: {min_lag_min: 0, max_lag_min: null}
+  - id: grind
+    batching: false
+    skip_if: {form: [bean]}                      # whole-bean orders are not ground
+    after: {min_lag_min: 30, max_lag_min: 1440}  # rest 30 min before packing; pack the same day
+  - id: pack
+    batching: false
+
+resources:
+  roaster_1:
+    stage: roast
+    calendar: two_shifts
+    capacity: {min: 8, max: 14, unit: kg_green}       # 8 kg works with lower gas and a shorter roast
+    duration: {fixed_min: 60, per_unit_min: 6.43}  # 14 kg = 150 min; 8 kg = 111 min (confirmed)
+    startup_min: 30                    # warm-up at the start of a working window (owner: "not important")
+    needs:
+      - {people: roaster_operator, qty: 1, during: whole_run}   # someone stands next to it the whole time
+    consumes:
+      - consumable: gas_cylinder
+        per_unit_by: roast_level       # cylinders per kg green
+        values: {light: 0.004, medium: 0.004, dark: 0.005556}  # 250 kg/cylinder, dark 180 kg
+    setups: {by: flavor, default_min: 0, rules: []}           # no cleaning between origins on the roaster
+    failure_modes:
+      - {id: drum_roller,  repair_min: 1440, with_spare_min: 240, degraded_ok: false}
+      - {id: drum_motor,   repair_min: 5760, with_spare_min: 240, degraded_ok: false}
+      - {id: cooling_fan,  repair_min: 360,  with_spare_min: 360, degraded_ok: true}   # cool by hand, blow chaff with a fan
+
+  blend_table:
+    stage: blend
+    calendar: two_shifts
+    duration: {fixed_min: 0, per_unit_min: 0.15}   # 100 kg in 15 min
+    needs:
+      - {people: [packer, roaster_operator], qty: 1, during: whole_run}
+
+  grinder_1:
+    stage: grind
+    calendar: two_shifts
+    duration: {fixed_min: 0, per_unit_min: 2.86}   # 14 kg in 40 min (about 21 kg/h)
+    needs:
+      - {people: packer, qty: 1, during: whole_run}  # the packer grinds (operator stays at the roaster)
+    setups:
+      by: flavor
+      default_min: 0
+      rules:                                         # clean only before a plain grind; spiced <-> cardamom needs nothing
+        - {from: cardamom, to: plain, min: 30, people: 1}
+        - {from: spiced,   to: plain, min: 30, people: 1}
+
+  packing_bench:
+    stage: pack
+    calendar: two_shifts
+    duration: {fixed_min: 0, per_unit_min: 2.14}   # 14 kg in 30 min, 250 g bags
+    needs:
+      - {people: packer, qty: 1, during: whole_run}
+
+products:
+  # Recipes in "parts" = grams of ROASTED coffee per 250 g bag, as the factory states them (rounds 7-8).
+  # "balance" = this item fills the bag up to the basis (cardamom absorbs any change in the other weights).
+  # Variant no_cardamom: the cardamom share is split equally between robusta and Brazil.
+  blend_190:
+    route: [roast, blend, grind, pack]
+    attributes: {flavor: cardamom, form: ground, roast_level: medium}
+    recipe_basis: 250
+    recipe:
+      - {material: green_robusta, parts: 80}
+      - {material: green_brazil,  parts: 150}
+      - {material: cardamom,      parts: balance, added_at: blend}   # = 20
+    variants: &no_cardamom
+      no_cardamom:
+        remove: cardamom
+        split_to: [green_robusta, green_brazil]
+        attributes: {flavor: plain}      # plain grinds need a clean grinder
+    price_per_unit: 760                 # 190 EGP / 250 g
+  blend_250:
+    route: [roast, blend, grind, pack]
+    attributes: {flavor: cardamom, form: ground, roast_level: medium}
+    recipe_basis: 250
+    recipe:
+      - {material: green_robusta,  parts: 50}
+      - {material: green_brazil,   parts: 100}
+      - {material: green_colombia, parts: 50}
+      - {material: green_india,    parts: 20}
+      - {material: cardamom,       parts: balance, added_at: blend}  # = 30
+    variants: *no_cardamom
+    price_per_unit: 1000
+  blend_300:
+    route: [roast, blend, grind, pack]
+    attributes: {flavor: cardamom, form: ground, roast_level: medium}
+    recipe_basis: 250
+    recipe:
+      - {material: green_robusta,  parts: 50}
+      - {material: green_brazil,   parts: 100}
+      - {material: green_colombia, parts: 50}
+      - {material: cardamom,       parts: balance, added_at: blend}  # = 50
+    variants: *no_cardamom
+    price_per_unit: 1200
+  saudi_green:
+    route: [roast, blend, grind, pack]
+    attributes: {flavor: spiced, form: ground, roast_level: light}
+    recipe_basis: 250                   # one oqiya = 250 g
+    recipe:
+      - {material: green_saudi, parts: balance}                     # = 150
+      - {material: cardamom,    parts: 100, added_at: blend}
+      # saffron and clove go in at grinding; small amounts, out of scope for planning
+    price_per_unit: null
+  toll_roast:
+    route: [roast, pack]
+    attributes: {flavor: plain, form: bean, roast_level: medium}
+    recipe: [{material: "@customer", share: 1.0}]
+    qty_is: input                       # the customer orders "roast my 100 kg green"
+    price_per_unit: 200                 # roasting fee per kg; beans billed separately
+
+yield_loss:                            # share of weight lost, by stage and attribute
+  roast:
+    by: roast_level
+    values: {light: 0.07, medium: 0.10, dark: 0.15}   # light is 6-8 %
+  grind: {by: null, values: {any: 0.0}}
+
+shelf_life_days:                       # roasted coffee in storage [min, max]
+  winter: [14, 30]
+  summer: [7, 7]
+  note: "Beans keep longer than ground coffee (not split yet)."
+
+order_classes:
+  shop:          {priority: 1, weight: 5, min_qty: 20,  owner: own,      lead_time_days: 1,   holding_cost_per_day: 0}
+  supermarket:   {priority: 1, weight: 5, min_qty: 20,  owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
+  cafe:          {priority: 2, weight: 3, min_qty: 20,  owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
+  online:        {priority: 2, weight: 2, min_qty: 0,   owner: own,      lead_time_days: 2,   holding_cost_per_day: 0}
+  export:        {priority: 2, weight: 3, min_qty: 100, owner: own,      lead_time_days: 7,   holding_cost_per_day: 0}
+  toll_roasting: {priority: 3, weight: 1, min_qty: 100, owner: customer, lead_time_days: 3,   holding_cost_per_day: 50,
+                  max_qty: 1000}       # above 1 ton is rejected today
+
+compatibility:
+  - {rule: no_mix, key: owner_id, scope: batch}       # customer-owned beans never share a batch
+  - {rule: same,   key: origin,   scope: batch}       # each origin roasted alone, blended after
+
+objective:                             # lexicographic: optimise 1, then 2 without making 1 worse, ...
+  - {kpi: late_qty,           filter: {priority: 1}}
+  - {kpi: weighted_tardiness}
+  - {kpi: plan_changes,       filter: {frozen_horizon_min: 180}}
+  - {kpi: batch_count}
+  - {kpi: setup_minutes}

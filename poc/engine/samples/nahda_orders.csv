@@ -1,0 +1,9 @@
+order_id,class,customer,product,variant,qty,release,due
+W01,normal,cust-1,cola_pet_500,,120000,2026-10-18T06:00,2026-10-20T06:00
+W02,high,cust-2,orange_pet_1500,,40000,2026-10-18T06:00,2026-10-19T06:00
+W03,critical,cust-3,energy_can_250,,200000,2026-10-18T06:00,2026-10-19T12:00
+W04,normal,cust-4,cola_can_330,,300000,2026-10-18T06:00,2026-10-20T18:00
+W05,normal,cust-5,lemon_glass_250,,60000,2026-10-18T06:00,2026-10-20T06:00
+W06,high,cust-1,water_pet_500,,150000,2026-10-18T06:00,2026-10-19T18:00
+W07,normal,cust-6,cola_pet_500,,80000,2026-10-18T06:00,2026-10-21T06:00
+W08,critical,cust-2,lemon_glass_250,,40000,2026-10-18T06:00,2026-10-19T06:00
