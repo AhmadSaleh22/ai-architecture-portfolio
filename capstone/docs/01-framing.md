@@ -1,0 +1,107 @@
+# Session 1 – Hesal framing
+
+Session notes: [docs/01-framing.md](../../docs/01-framing.md).
+
+## Applied to Hesal
+
+| Session idea | In Hesal |
+|---|---|
+| Baseline first | Hesal already runs without AI: salaries, automatic savings, requests with an approval chain. The target adds the AI layer around it. |
+| Baseline numbers | Saudi households save about 6% of income; the Vision 2030 target is 10%. Advance requests per month today: not measured yet. |
+| Goals / non-goals | Goal: employees save and stop depending on advances. Non-goals: investment products, a Hesal card, open banking. |
+| Fix what must not change | Data stays in KSA. Employers and partners see totals only. Eligibility is decided in code. A human approves every application. |
+| Assumptions with a source | Each number below says where it comes from, or says "assumed". |
+| Perspectives × views | Information × security: who sees whose data. Functional × security: what tools the agent has. Operational × availability: LLM down, the platform still works. |
+| Target in steps | v1: assistant, statement reader, service applications in one country. Later: more countries, partner portal. |
+
+## Decisions this triggers
+
+- **ADR 0002** – Who sees employee data (employee only; employers and partners see totals)
+- **ADR 0003** – Where data and models run (in the company's country; KSA first)
+- **ADR 0004** – Keeping bank statements (encrypted, one year, then deleted)
+- **ADR 0005** – What the agent can and can't do (no withdraw tool, employee confirms, company approves)
+
+## Assignment
+
+Optional, becomes capstone part 1 (due 14 Nov): choose the scenario, write the problem statement, rank the quality attributes, draw C4 Level 1 and 2.
+
+### Scenario
+
+Hesal: see the [README](../README.md).
+
+### Problem
+
+Most employees have no savings. The salary comes in and gets spent, and when something comes up they turn to the company for an advance, a raise, or to buy something for them. Saudi households save about 6% of their income, below the 10% that Vision 2030 aims for ([Strategy&](https://www.strategyand.pwc.com/m1/en/articles/2019/improved-saudi-savings-to-have-beneficial-results.html); [KPMG via Asharq Al-Awsat](https://english.aawsat.com/node/2790556)).
+
+For the company this means a steady stream of advance requests, HR and finance time spent handling them, and pressure on cash.
+
+### Goals
+
+| Goal | Target | Source |
+|---|---|---|
+| Employees who keep saving | 90% still saving after 6 months | UK auto-enrolment: about 9% opted out ([DWP via Actuarial Post](https://actuarialpost.co.uk/article/just-10---of-workers-opting-out-of-auto-enrolment-schemes-5235.htm)) |
+| Default savings rate | 10% of salary | Vision 2030 target |
+| Safety cushion | One month of expenses saved after 12 months | Calculated: 10% saved each month ≈ 1/9 of a month's spending |
+| Advance requests | Half of today's level within 6 months | Assumed; today's level still to measure |
+
+### Stakeholders
+
+| Who | What they care about | Where it's answered |
+|---|---|---|
+| Employee | Their data stays private, advice they can trust | C4 L2 (personal finance store), ADR 0002 |
+| HR | Fewer advance requests, simple approvals | Goals, admin portal |
+| Finance | Correct salary runs and savings transfers | C4 L1, core API |
+| CEO | Staff who stay, less cash pressure | Goals |
+| Hesal team | Managing services and applications by hand in v1 | Admin portal |
+| Partner companies | Complete applications | C4 L1 |
+| Partner bank | Correct savings transfers | C4 L1 |
+| Shariah board | Qard hasan and lease-to-own terms are right, and the assistant quotes them correctly | Documents index, C4 L1 |
+| Regulator (central bank) | Hesal doesn't hold money it isn't licensed to hold | Savings sit at the partner bank |
+
+### Quality attributes (ranked)
+
+1. **Accuracy.** Salaries, savings and money plans are numbers people act on. A wrong number costs real money. Numbers are calculated in code, never by the LLM.
+2. **Security and privacy.** Hesal holds salaries, insurance, spending and family details. A leak hurts every employee on the platform.
+3. **Availability.** Salary day can't fail. If the LLM is down, salaries, savings and requests still work; only the assistant stops.
+4. **Cost.** The AI must cost less per employee than what Hesal earns per employee. Worked out in session 2.
+5. **Latency.** A plan that takes a few seconds is fine. Nobody's money depends on speed.
+
+### In scope / out of scope (v1)
+
+In scope:
+- one country (KSA)
+- money plans from an uploaded bank statement
+- questions about the employee's own numbers and Hesal's documents
+- service suggestions and applications through the agent
+
+Out of scope:
+- investment products
+- a Hesal payment card
+- direct bank connections (open banking)
+- a self-service portal for partners
+
+### Assumptions
+
+| What | Value | Source |
+|---|---|---|
+| Employees saving today | close to none | assumed |
+| Employees who upload a statement each month | ? | assumed |
+| Questions to the assistant per employee per month | about 30 | assumed |
+| Peak load | salary day, Ramadan, back to school | assumed |
+
+### Diagrams
+
+C4 Level 1 – system context
+
+![C4 L1](../diagrams/c4-l1-context.svg)
+
+C4 Level 2 – containers
+
+![C4 L2](../diagrams/c4-l2-containers.svg)
+
+The session quiz is required for the certificate.
+
+## Open questions
+
+- Does submitting insurance or financing applications make Hesal a broker that needs a licence?
+- Can stored statements be used to improve the model? If yes, it needs a separate consent.
