@@ -15,92 +15,92 @@ The class example was an e-commerce store whose marketing is all manual: fixed h
 7. **Apply perspectives to views** (Rozanski & Woods). Quality attributes such as security, performance, availability and evolution cut across every view: functional, information, concurrency, development, deployment, operational. Examples: information × security (access control), concurrency × performance (shared resources, blocking, queuing), functional × evolution (extension points, flexible interfaces).
 8. **The target adds an AI layer around the existing stores.** RFM, CLV and segmentation models feed customer segments; a churn model runs on a 24-hour ETL; a guardrails service scans customer interactions; the recommendation engine starts with fixed rules and sends abandoned-cart reminders over WhatsApp.
 
-## Applied to the capstone
+## Applied to Hesal
 
-| Session idea | What it changes in the planning assistant |
+| Session idea | In Hesal |
 |---|---|
-| Baseline first | Draw today's replanning flow before the target: planner, ERP, MES, maintenance system, planning rules, and the phone calls in between. Still to draw: `diagrams/src/baseline.dot`. |
-| Baseline numbers | The KPI is replanning time: 30–90 min by hand today (see README). Still to write: the target number, and how it's timed (disruption reported → plan approved). |
-| Goals / non-goals | Two non-goals are already in the repo: the assistant never writes to machines (OT is one-way), and the LLM never builds the schedule (ADR 0002). |
-| Fix what must not change | Already fixed: data stays in the region, OT is read-only, a human approves every change. Add from this session: guardrails on what the LLM reads and says, internal services behind a VPN, auth + HTTPS on anything external. |
-| Assumptions with a source | Write load the same way: planners per plant, disruptions per day, and the seasonal peak (Ramadan for a food and beverage maker). Mark each as made-up until it has a source. |
-| Perspectives × views | The cells that matter most here: information × security (who sees which plant's data), concurrency × performance (several disruptions at once → solver queue), operational × availability (LLM down → plans still flow, per ADR 0002). |
-| Target in steps | v1 keeps the plant systems as read-only sources and adds solver + checker + LLM explainer around them, like the class example. |
+| Baseline first | Hesal already runs without AI: salaries, automatic savings, requests with an approval chain. The target adds the AI layer around it. |
+| Baseline numbers | Saudi households save about 6% of income; the Vision 2030 target is 10%. Advance requests per month today: not measured yet. |
+| Goals / non-goals | Goal: employees save and stop depending on advances. Non-goals: investment products, a Hesal card, open banking. |
+| Fix what must not change | Data stays in KSA. Employers and partners see totals only. Eligibility is decided in code. A human approves every application. |
+| Assumptions with a source | Each number below says where it comes from, or says "assumed". |
+| Perspectives × views | Information × security: who sees whose data. Functional × security: what tools the agent has. Operational × availability: LLM down, the platform still works. |
+| Target in steps | v1: assistant, statement reader, service applications in one country. Later: more countries, partner portal. |
 
 ## Decisions this triggers
 
-- **ADR 0003** – Where the system runs and where the data lives (in-region hosting; limits the model hosting options)
-- **ADR 0004** – How plant data reaches the assistant: daily batch or events (a 24-hour ETL is fine for churn, a machine breakdown can't wait a day)
-- **ADR 0005** – Guardrails on LLM input and output (prompt injection through planner questions and documents; what gets checked before an explanation reaches the planner)
+- **ADR 0002** – Who sees employee data (employee only; employers and partners see totals)
+- **ADR 0003** – Where data and models run (in the company's country; KSA first)
+- **ADR 0004** – Keeping bank statements (encrypted, one year, then deleted)
+- **ADR 0005** – What the agent can and can't do (no withdraw tool, employee confirms, company approves)
 
 ## Assignment
 
-Optional, but it becomes capstone part 1 (due 14 Nov): choose the scenario, write the problem statement, rank the quality attributes, draw C4 Level 1 and 2.
+Optional, becomes capstone part 1 (due 14 Nov): choose the scenario, write the problem statement, rank the quality attributes, draw C4 Level 1 and 2.
 
-- Scenario: README
-- Problem, stakeholders, ranked quality attributes, scope: the sections below
-- C4 Level 1 and Level 2: see [Diagrams](#diagrams) below (sources in `diagrams/src/`)
+### Scenario
 
-The session quiz is required for the certificate.
+Hesal: see the [README](../README.md).
 
 ### Problem
 
-When something goes wrong on a production line (a machine breaks, material arrives late, a rush order comes in), the planner rebuilds the plan by hand. That takes 30 to 90 minutes, across several systems and phone calls, and the result depends on who is on shift. Meanwhile orders slip: about 1 in 5 critical orders finishes late (baseline from the synthetic data, to be confirmed with real data).
+Most employees have no savings. The salary comes in and gets spent, and when something comes up they turn to the company for an advance, a raise, or to buy something for them. Saudi households save about 6% of their income, below the 10% that Vision 2030 aims for ([Strategy&](https://www.strategyand.pwc.com/m1/en/articles/2019/improved-saudi-savings-to-have-beneficial-results.html); [KPMG via Asharq Al-Awsat](https://english.aawsat.com/node/2790556)).
 
-Who feels it: planners (time pressure, blame when it goes wrong), shift supervisors (plans change mid-shift), sales (hear about delays from the customer), plant managers (overtime, missed deliveries).
+For the company this means a steady stream of advance requests, HR and finance time spent handling them, and pressure on cash.
 
-Success in 6 months (assumed until measured):
-- time from disruption to an approved plan: 30–90 min → under 10 min
-- critical orders late: ~20% → under 5%
-- zero plans that break a hard rule reach the floor
+### Goals
 
+| Goal | Target | Source |
+|---|---|---|
+| Employees who keep saving | 90% still saving after 6 months | UK auto-enrolment: about 9% opted out ([DWP via Actuarial Post](https://actuarialpost.co.uk/article/just-10---of-workers-opting-out-of-auto-enrolment-schemes-5235.htm)) |
+| Default savings rate | 10% of salary | Vision 2030 target |
+| Safety cushion | One month of expenses saved after 12 months | Calculated: 10% saved each month ≈ 1/9 of a month's spending |
+| Advance requests | Half of today's level within 6 months | Assumed; today's level still to measure |
 
 ### Stakeholders
 
 | Who | What they care about | Where it's answered |
 |---|---|---|
-| Planner | A plan they trust, fast, and they keep the last word | C4 L1, L2 (web app), ADR 0002 |
-| Shift supervisor | Few changes mid-shift, clear reasons when there are | Plan stability in the engine (poc/) |
-| Plant manager | Fewer late orders, less overtime | Success numbers above |
-| Sales | Early warning when an order will slip | Out of scope for v1 (see below) |
-| Maintenance | Breakdowns reach the plan without extra work | C4 L2 (ingestion from CMMS) |
-| OT / plant security | Nothing writes back to the machines | C4 L1 (one-way gateway in the DMZ) |
-| IT platform team | Something they can host, patch and monitor | C4 L2, ADR 0003 (to write) |
-| Data protection officer | Plant data stays in the region | C4 L1 (in-region LLM), ADR 0003 |
+| Employee | Their data stays private, advice they can trust | C4 L2 (personal finance store), ADR 0002 |
+| HR | Fewer advance requests, simple approvals | Goals, admin portal |
+| Finance | Correct salary runs and savings transfers | C4 L1, core API |
+| CEO | Staff who stay, less cash pressure | Goals |
+| Hesal team | Managing services and applications by hand in v1 | Admin portal |
+| Partner companies | Complete applications | C4 L1 |
+| Partner bank | Correct savings transfers | C4 L1 |
+| Shariah board | Qard hasan and lease-to-own terms are right, and the assistant quotes them correctly | Documents index, C4 L1 |
+| Regulator (central bank) | Hesal doesn't hold money it isn't licensed to hold | Savings sit at the partner bank |
 
-### Quality goals (ranked)
+### Quality attributes (ranked)
 
-1. **Correctness.** A plan that breaks a hard rule (capacity, sequence, shift, material) never reaches the floor. Target: 0. Every plan passes the checker before anyone sees it.
-2. **Security.** Read-only from OT, data stays in the region, sign-in through the company SSO. A wrong plan costs a few hours; a breach into the plant network can stop it.
-3. **Availability.** During shifts the planner can always get a plan. If the LLM is down the plan still comes, just without the explanation. If the solver times out, the greedy plan is used.
-4. **Latency.** First proposal within 2 minutes of a disruption; answers to planner questions within 6 seconds (p95). Faster than this doesn't matter; the target is "under 10 min to an approved plan".
-5. **Cost.** Under a few hundred dollars a month per plant for hosting and LLM calls (assumed). Last because one avoided late critical order pays for a month.
+1. **Accuracy.** Salaries, savings and money plans are numbers people act on. A wrong number costs real money. Numbers are calculated in code, never by the LLM.
+2. **Security and privacy.** Hesal holds salaries, insurance, spending and family details. A leak hurts every employee on the platform.
+3. **Availability.** Salary day can't fail. If the LLM is down, salaries, savings and requests still work; only the assistant stops.
+4. **Cost.** The AI must cost less per employee than what Hesal earns per employee. Worked out in session 2.
+5. **Latency.** A plan that takes a few seconds is fine. Nobody's money depends on speed.
 
-Why this order: the planner only uses the assistant if its plans are right, and the plant only allows it if it's safe. Speed and cost are easy to trade after that.
+### In scope / out of scope (v1)
 
-### In scope / out of scope
+In scope:
+- one country (KSA)
+- money plans from an uploaded bank statement
+- questions about the employee's own numbers and Hesal's documents
+- service suggestions and applications through the agent
 
-In scope (v1):
-- one plant, its lines and shifts
-- disruptions: machine down, material late, rush order
-- proposing a new plan, checking it, explaining it, logging the decision
+Out of scope:
+- investment products
+- a Hesal payment card
+- direct bank connections (open banking)
+- a self-service portal for partners
 
-Out of scope (v1):
-- writing anything back to MES, SCADA or the machines
-- the LLM building or changing the schedule (ADR 0002)
-- demand forecasting and purchasing
-- telling customers or sales directly (the planner decides who to tell)
-- several plants sharing work
+### Assumptions
 
-### Design steps and how they're checked
-
-| Step | How it's checked |
-|---|---|
-| Problem and baseline numbers | Replanning time measured on a few real disruptions (to do) |
-| Hard rules written down | Each rule has a test in the checker (`poc/engine/tests`) |
-| Engine | Backtest on 30 days of synthetic data, replanning day by day with no look-ahead: late orders 12 → 3 (poc/README) |
-| Explainer | Every rule it quotes must exist in the rules index; spot-checked by a planner |
-| Whole system | Pilot with one planner on one line before anyone relies on it |
+| What | Value | Source |
+|---|---|---|
+| Employees saving today | close to none | assumed |
+| Employees who upload a statement each month | ? | assumed |
+| Questions to the assistant per employee per month | about 30 | assumed |
+| Peak load | salary day, Ramadan, back to school | assumed |
 
 ### Diagrams
 
@@ -112,8 +112,9 @@ C4 Level 2 – containers
 
 ![C4 L2](../diagrams/c4-l2-containers.svg)
 
+The session quiz is required for the certificate.
 
 ## Open questions
 
-- "In-country in transit": does traffic have to stay inside the country, or only be encrypted? This decides whether an LLM API hosted abroad is allowed at all.
-- How is CSAT from text feedback measured in practice, and what's the equivalent for planners?
+- Does submitting insurance or financing applications make Hesal a broker that needs a licence?
+- Can stored statements be used to improve the model? If yes, it needs a separate consent.

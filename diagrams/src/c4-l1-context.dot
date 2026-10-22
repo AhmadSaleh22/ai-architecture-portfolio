@@ -1,36 +1,28 @@
-// C4 Level 1 - System context: Production planning assistant
+// C4 Level 1 - System context: Hesal
 // Render: dot -Tsvg src/c4-l1-context.dot -o c4-l1-context.svg
 digraph L1 {
-  rankdir=TB; nodesep=0.6; ranksep=0.8;
+  rankdir=TB; nodesep=0.6; ranksep=0.9;
   node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#555555", fillcolor="#eeeeee", margin="0.2,0.12"];
   edge [fontname="Helvetica", fontsize=9, color="#666666"];
 
-  planner    [label="Production planner\n[Person]\nReplans after disruptions,\napproves every change", fillcolor="#08427b", fontcolor="white"];
-  supervisor [label="Shift supervisor\n[Person]\nReports problems,\nfollows the plan", fillcolor="#08427b", fontcolor="white"];
-  manager    [label="Plant manager\n[Person]\nOn-time delivery, escalations", fillcolor="#08427b", fontcolor="white"];
+  employee [label="Employee\n[Person]\nSaves, plans, applies for\nloans and services", fillcolor="#08427b", fontcolor="white"];
+  admins   [label="HR, finance, CEO\n[Person]\nManage employees and salaries,\napprove requests", fillcolor="#08427b", fontcolor="white"];
+  team     [label="Hesal team\n[Person]\nAdds services, sends\napplications to partners", fillcolor="#08427b", fontcolor="white"];
+  shariah  [label="Shariah board\n[Person]\nApproves product terms", fillcolor="#08427b", fontcolor="white"];
 
-  assistant  [label="Planning assistant\n[Software system]\nProposes a new plan after a disruption,\nchecks it against the plant rules,\nexplains it in Arabic / English", fillcolor="#1168bd", fontcolor="white", width=3.2];
+  hesal [label="Hesal\n[Software system]\nSalaries, savings, qard hasan, lease-to-own,\nservices, and an AI assistant for the employee", fillcolor="#1168bd", fontcolor="white", width=3.4];
 
-  erp   [label="ERP\n[Existing system]\nOrders, materials, master data"];
-  aps   [label="Planning tool / Excel\n[Existing]\nCurrent schedule"];
-  cmms  [label="Maintenance system (CMMS)\n[Existing]\nRepair ETA, planned stops"];
-  docs  [label="Planning rules and SOPs\n[Documents]"];
-  llm   [label="LLM hosting\n[In-region]\nNo data leaves the region"];
+  cobank  [label="Company's bank\n[External]\nPays salaries"];
+  pbank   [label="Partner bank\n[External]\nSavings accounts in\nthe employee's name"];
+  partner [label="Partner companies\n[External]\nInsurance, cars, instalments"];
+  llm     [label="LLM provider\n[External, hosted in KSA]"];
 
-  subgraph cluster_ot {
-    label="Plant OT network (read-only for us)"; fontname="Helvetica"; fontsize=10; style="dashed"; color="#999999";
-    mes [label="MES / SCADA\n[Existing]\nMachine states, counts"];
-    gw  [label="OT gateway in DMZ\n[Existing]\nOne-way out"];
-    mes -> gw [label="events"];
-  }
-
-  planner -> assistant    [label="asks, reviews, approves"];
-  supervisor -> assistant [label="reports issues, reads plan"];
-  assistant -> manager    [label="escalations (>2 h stop)"];
-  assistant -> erp        [label="reads orders, materials"];
-  assistant -> aps        [label="reads schedule;\napproved plan goes back via planner"];
-  assistant -> cmms       [label="reads repair ETA"];
-  assistant -> docs       [label="reads rules"];
-  assistant -> llm        [label="explanations only"];
-  gw -> assistant         [label="machine events (one-way)"];
+  employee -> hesal [label="saves, chats, uploads\nbank statement, applies"];
+  admins   -> hesal [label="manage, approve;\nsee totals only"];
+  team     -> hesal [label="manage services"];
+  shariah  -> hesal [label="approved terms"];
+  hesal -> cobank  [label="salary run"];
+  hesal -> pbank   [label="monthly savings transfer"];
+  hesal -> partner [label="applications the\nemployee confirmed"];
+  hesal -> llm     [label="chat, plans, statements\n(no names)"];
 }
