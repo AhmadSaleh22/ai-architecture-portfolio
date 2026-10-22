@@ -1,0 +1,36 @@
+// C4 Level 2 - Containers: inside the planning assistant
+// Render: dot -Tsvg src/c4-l2-containers.dot -o c4-l2-containers.svg
+digraph L2 {
+  rankdir=LR; nodesep=0.45; ranksep=0.7; compound=true;
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, color="#555555", fillcolor="#eeeeee", margin="0.15,0.1"];
+  edge [fontname="Helvetica", fontsize=8, color="#666666"];
+
+  planner [label="Planner\n[Person]", fillcolor="#08427b", fontcolor="white"];
+
+  subgraph cluster_sys {
+    label="Planning assistant (in-region cloud)"; fontname="Helvetica"; fontsize=11; style="rounded"; color="#1168bd";
+    node [fillcolor="#438dd5", fontcolor="white"];
+    ui     [label="Web app\n[React]\nDisruption inbox, proposed plan,\napprove / edit, chat (AR/EN)"];
+    api    [label="Orchestrator API\n[Python]\nDetects disruptions, calls engine,\nbuilds the explanation request"];
+    engine [label="Scheduling engine\n[Python, OR-Tools CP-SAT]\nSolver + independent checker\n(see poc/)"];
+    expl   [label="Explainer\n[LLM client + guardrails]\nExplains the checked plan,\ncites real rules only"];
+    ingest [label="Ingestion\n[Python workers]\nEvents: near real time\nERP / CMMS: every 5-15 min"];
+    state  [label="Plant state DB\n[PostgreSQL]\nOrders, schedule, line status,\nas_of per source", shape=cylinder];
+    search [label="Rules index\n[PostgreSQL + pgvector]\nSOPs, planning rules", shape=cylinder];
+    audit  [label="Decision log\n[PostgreSQL]\nProposal, data as_of,\nchosen option, outcome", shape=cylinder];
+  }
+
+  { rank=source; planner; erp [label="ERP"]; cmms [label="CMMS"]; gw [label="OT gateway (DMZ)\none-way"]; docs [label="SOPs / rules"]; }
+  { rank=sink; llm [label="LLM (in-region)"]; }
+
+  planner -> ui [label="HTTPS + SSO"];
+  ui -> api;
+  api -> engine [label="plan / repair"];
+  api -> expl   [label="explain plan"];
+  expl -> llm;
+  expl -> search [label="retrieve rules"];
+  api -> state; engine -> state [label="reads"];
+  api -> audit  [label="every decision"];
+  gw -> ingest; erp -> ingest; cmms -> ingest; docs -> ingest;
+  ingest -> state; ingest -> search;
+}

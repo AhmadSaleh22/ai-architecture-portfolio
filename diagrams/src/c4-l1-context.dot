@@ -1,0 +1,36 @@
+// C4 Level 1 - System context: Production planning assistant
+// Render: dot -Tsvg src/c4-l1-context.dot -o c4-l1-context.svg
+digraph L1 {
+  rankdir=TB; nodesep=0.6; ranksep=0.8;
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#555555", fillcolor="#eeeeee", margin="0.2,0.12"];
+  edge [fontname="Helvetica", fontsize=9, color="#666666"];
+
+  planner    [label="Production planner\n[Person]\nReplans after disruptions,\napproves every change", fillcolor="#08427b", fontcolor="white"];
+  supervisor [label="Shift supervisor\n[Person]\nReports problems,\nfollows the plan", fillcolor="#08427b", fontcolor="white"];
+  manager    [label="Plant manager\n[Person]\nOn-time delivery, escalations", fillcolor="#08427b", fontcolor="white"];
+
+  assistant  [label="Planning assistant\n[Software system]\nProposes a new plan after a disruption,\nchecks it against the plant rules,\nexplains it in Arabic / English", fillcolor="#1168bd", fontcolor="white", width=3.2];
+
+  erp   [label="ERP\n[Existing system]\nOrders, materials, master data"];
+  aps   [label="Planning tool / Excel\n[Existing]\nCurrent schedule"];
+  cmms  [label="Maintenance system (CMMS)\n[Existing]\nRepair ETA, planned stops"];
+  docs  [label="Planning rules and SOPs\n[Documents]"];
+  llm   [label="LLM hosting\n[In-region]\nNo data leaves the region"];
+
+  subgraph cluster_ot {
+    label="Plant OT network (read-only for us)"; fontname="Helvetica"; fontsize=10; style="dashed"; color="#999999";
+    mes [label="MES / SCADA\n[Existing]\nMachine states, counts"];
+    gw  [label="OT gateway in DMZ\n[Existing]\nOne-way out"];
+    mes -> gw [label="events"];
+  }
+
+  planner -> assistant    [label="asks, reviews, approves"];
+  supervisor -> assistant [label="reports issues, reads plan"];
+  assistant -> manager    [label="escalations (>2 h stop)"];
+  assistant -> erp        [label="reads orders, materials"];
+  assistant -> aps        [label="reads schedule;\napproved plan goes back via planner"];
+  assistant -> cmms       [label="reads repair ETA"];
+  assistant -> docs       [label="reads rules"];
+  assistant -> llm        [label="explanations only"];
+  gw -> assistant         [label="machine events (one-way)"];
+}

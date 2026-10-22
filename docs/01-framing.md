@@ -19,7 +19,7 @@ The class example was an e-commerce store whose marketing is all manual: fixed h
 
 | Session idea | What it changes in the planning assistant |
 |---|---|
-| Baseline first | Draw today's replanning flow before the target: planner, ERP, MES, maintenance system, planning rules, and the phone calls in between. New diagram: `diagrams/src/baseline.mmd`. |
+| Baseline first | Draw today's replanning flow before the target: planner, ERP, MES, maintenance system, planning rules, and the phone calls in between. Still to draw: `diagrams/src/baseline.dot`. |
 | Baseline numbers | The KPI is replanning time: 30–90 min by hand today (see README). Still to write: the target number, and how it's timed (disruption reported → plan approved). |
 | Goals / non-goals | Two non-goals are already in the repo: the assistant never writes to machines (OT is one-way), and the LLM never builds the schedule (ADR 0002). |
 | Fix what must not change | Already fixed: data stays in the region, OT is read-only, a human approves every change. Add from this session: guardrails on what the LLM reads and says, internal services behind a VPN, auth + HTTPS on anything external. |
@@ -39,7 +39,7 @@ Optional, but it becomes capstone part 1 (due 14 Nov): choose the scenario, writ
 
 - Scenario: README
 - Problem, stakeholders, ranked quality attributes, scope: the sections below
-- C4 Level 1: `diagrams/src/c4-context.mmd` (draft) · C4 Level 2: `diagrams/src/c4-container.mmd`
+- C4 Level 1 and Level 2: see [Diagrams](#diagrams) below (sources in `diagrams/src/`)
 
 The session quiz is required for the certificate.
 
@@ -57,11 +57,60 @@ Success in 6 months (assumed until measured):
 
 ### Stakeholders
 
+| Who | What they care about | Where it's answered |
+|---|---|---|
+| Planner | A plan they trust, fast, and they keep the last word | C4 L1, L2 (web app), ADR 0002 |
+| Shift supervisor | Few changes mid-shift, clear reasons when there are | Plan stability in the engine (poc/) |
+| Plant manager | Fewer late orders, less overtime | Success numbers above |
+| Sales | Early warning when an order will slip | Out of scope for v1 (see below) |
+| Maintenance | Breakdowns reach the plan without extra work | C4 L2 (ingestion from CMMS) |
+| OT / plant security | Nothing writes back to the machines | C4 L1 (one-way gateway in the DMZ) |
+| IT platform team | Something they can host, patch and monitor | C4 L2, ADR 0003 (to write) |
+| Data protection officer | Plant data stays in the region | C4 L1 (in-region LLM), ADR 0003 |
 
 ### Quality goals (ranked)
 
+1. **Correctness.** A plan that breaks a hard rule (capacity, sequence, shift, material) never reaches the floor. Target: 0. Every plan passes the checker before anyone sees it.
+2. **Security.** Read-only from OT, data stays in the region, sign-in through the company SSO. A wrong plan costs a few hours; a breach into the plant network can stop it.
+3. **Availability.** During shifts the planner can always get a plan. If the LLM is down the plan still comes, just without the explanation. If the solver times out, the greedy plan is used.
+4. **Latency.** First proposal within 2 minutes of a disruption; answers to planner questions within 6 seconds (p95). Faster than this doesn't matter; the target is "under 10 min to an approved plan".
+5. **Cost.** Under a few hundred dollars a month per plant for hosting and LLM calls (assumed). Last because one avoided late critical order pays for a month.
+
+Why this order: the planner only uses the assistant if its plans are right, and the plant only allows it if it's safe. Speed and cost are easy to trade after that.
 
 ### In scope / out of scope
+
+In scope (v1):
+- one plant, its lines and shifts
+- disruptions: machine down, material late, rush order
+- proposing a new plan, checking it, explaining it, logging the decision
+
+Out of scope (v1):
+- writing anything back to MES, SCADA or the machines
+- the LLM building or changing the schedule (ADR 0002)
+- demand forecasting and purchasing
+- telling customers or sales directly (the planner decides who to tell)
+- several plants sharing work
+
+### Design steps and how they're checked
+
+| Step | How it's checked |
+|---|---|
+| Problem and baseline numbers | Replanning time measured on a few real disruptions (to do) |
+| Hard rules written down | Each rule has a test in the checker (`poc/engine/tests`) |
+| Engine | Backtest on 30 days of synthetic data, replanning day by day with no look-ahead: late orders 12 → 3 (poc/README) |
+| Explainer | Every rule it quotes must exist in the rules index; spot-checked by a planner |
+| Whole system | Pilot with one planner on one line before anyone relies on it |
+
+### Diagrams
+
+C4 Level 1 – system context
+
+![C4 L1](../diagrams/c4-l1-context.svg)
+
+C4 Level 2 – containers
+
+![C4 L2](../diagrams/c4-l2-containers.svg)
 
 
 ## Open questions
