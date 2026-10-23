@@ -83,6 +83,6 @@ So a change that breaks a principle can't be merged without someone noticing.
 
 ## Diagram
 
-![Governance](../diagrams/governance.png)
+[![Governance](../diagrams/governance.png)](../diagrams/governance.png)
 
-Source: [governance.drawio](../diagrams/src/governance.drawio) · First sketch: [governance-sketch.png](../diagrams/src/governance-sketch.png)
+[Open in draw.io](https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2FAhmadSaleh22%2Fai-architecture-portfolio%2Fmain%2Fdiagrams%2Fsrc%2Fgovernance.drawio) · Source file: [governance.drawio](../diagrams/src/governance.drawio) · First sketch: [governance-sketch.png](../diagrams/src/governance-sketch.png)
