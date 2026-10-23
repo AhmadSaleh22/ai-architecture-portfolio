@@ -1,0 +1,60 @@
+digraph G {
+  rankdir=LR; nodesep=0.35; ranksep=0.6; newrank=true;
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, fillcolor="#eeeeee", color="#555555", margin="0.15,0.08"];
+  edge [fontname="Helvetica", fontsize=8, color="#666666"];
+
+  admin    [label="Admin /\nmarketing team", fillcolor="#08427b", fontcolor="white"];
+  customer [label="Customers\nsite · email · app", fillcolor="#08427b", fontcolor="white"];
+
+  subgraph cluster_country {
+    label="Everything stays in the country (PDPL)"; style="dashed"; color="#999999"; fontname="Helvetica"; fontsize=10;
+
+    subgraph cluster_data {
+      label="Data"; style="rounded"; color="#bbbbbb";
+      db     [label="Store database\nPostgreSQL + pgvector\n(ADR 0004)", shape=cylinder];
+      events [label="Site events\ncart · purchases · messages sent"];
+    }
+
+    subgraph cluster_batch {
+      label="Nightly (ADR 0003)"; style="rounded"; color="#bbbbbb";
+      churn [label="Churn model"];
+      seg   [label="Customer segments"];
+      vec   [label="Product vectors"];
+    }
+
+    subgraph cluster_ai {
+      label="AI suggests"; style="rounded"; color="#1168bd";
+      node [fillcolor="#438dd5", fontcolor="white"];
+      offers  [label="Offer and campaign agent\nproducts, customers, discount"];
+      advisor [label="Advisor for admins\nanswers with numbers (P2)"];
+    }
+    llm [label="LLM API\nhosted in the country\n(ADR 0002)"];
+
+    subgraph cluster_code {
+      label="Code decides (real-time)"; style="rounded"; color="#2e7d32";
+      node [fillcolor="#c8e6c9"];
+      profit  [label="Profit check (P1)"];
+      content [label="Text matches product (P4)"];
+      limit   [label="Message limit 2/month (P3)"];
+    }
+  }
+
+  ci [label="CI guardrail\nchecks settings + ADRs\non every push", shape=note, fillcolor="#fff3cd"];
+
+  events -> db;
+  db -> churn; db -> seg; db -> vec;
+  churn -> offers; seg -> offers; vec -> offers [label="interests first (P4)"];
+  db -> advisor;
+  offers -> llm [dir=both]; advisor -> llm [dir=both];
+  admin -> advisor [label="offer idea"];
+  advisor -> admin [label="advice + numbers"];
+  offers -> profit;
+  profit -> content [label="profitable"];
+  profit -> admin [label="loses money", color="#c62828", fontcolor="#c62828"];
+  admin -> content [label="approved"];
+  content -> limit;
+  events -> limit [label="count so far"];
+  limit -> customer [label="within limit"];
+  admin -> offers [label="pause switch", style=dashed];
+  ci -> profit [style=dotted, arrowhead=none]; ci -> limit [style=dotted, arrowhead=none]; ci -> llm [style=dotted, arrowhead=none];
+}
