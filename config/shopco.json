@@ -1,0 +1,7 @@
+{
+  "data": { "country": "SA" },
+  "llm": { "provider_region": "SA" },
+  "vector_store": { "type": "pgvector", "region": "SA" },
+  "offers": { "profit_check": true, "losing_offers": "admin_approval" },
+  "messages": { "monthly_limit_per_customer": 2, "enforced_by": "code" }
+}

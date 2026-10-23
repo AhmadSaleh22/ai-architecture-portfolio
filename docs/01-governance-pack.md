@@ -70,7 +70,16 @@ Every change to the system (a new campaign type, a new model, a new feature) goe
 - [ ] Does AI advice to admins show the numbers it's based on? (P2)
 - [ ] Can an admin pause a campaign, or the AI as a whole, with one switch?
 
-## Automated guardrail (optional)
+## Automated guardrail
+
+A CI check runs on every push and pull request ([workflow](../.github/workflows/guardrail.yml), [script](../checks/check_principles.py)). It reads the system settings in [config/shopco.json](../config/shopco.json) and fails the build if:
+
+- the profit check is off, or losing offers don't go to an admin (P1)
+- the message limit is above 2 a month, or isn't enforced in code (P3)
+- the LLM or the vectors are outside the country (ADR 0002, 0004)
+- an ADR is missing its options, decision or revisit condition
+
+So a change that breaks a principle can't be merged without someone noticing.
 
 ## Diagram
 
