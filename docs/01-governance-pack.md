@@ -85,4 +85,4 @@ So a change that breaks a principle can't be merged without someone noticing.
 
 ![Governance](../diagrams/governance.png)
 
-Source: `../diagrams/src/governance.drawio`
+Source: [governance.drawio](../diagrams/src/governance.drawio) · First sketch: [governance-sketch.png](../diagrams/src/governance-sketch.png)
