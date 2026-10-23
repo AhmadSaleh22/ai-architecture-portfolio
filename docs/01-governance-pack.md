@@ -34,7 +34,11 @@ The AI suggests. Code and people decide.
 
 ## ADRs
 
-*(to write: three decisions, one file each in `adr/`)*
+| ADR | Decision | Principle |
+|---|---|---|
+| [0002 – Where the LLM runs](../adr/0002-llm-hosting.md) | LLM API hosted in the country | data stays in the country (PDPL) |
+| 0003 | *(to write)* | |
+| 0004 | *(to write)* | |
 
 ## ARB checklist
 
