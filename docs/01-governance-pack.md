@@ -42,15 +42,33 @@ The AI suggests. Code and people decide.
 
 ## ARB checklist
 
-### Security
+Every change to the system (a new campaign type, a new model, a new feature) goes through these questions before release. Any "no" means it doesn't ship until it's fixed.
 
-### Privacy (PDPL)
+**Security**
+- [ ] Does the AI only reach the data this task needs, through our own API and never straight into the database?
+- [ ] Is text from customers and suppliers (reviews, product descriptions) treated as data, never as instructions to the AI?
+- [ ] Are internal services behind the VPN, and anything external on authentication and HTTPS?
 
-### Evals
+**Privacy (PDPL)**
+- [ ] Does all customer data stay in the country, including what's sent to the LLM and the vectors? (ADR 0002, 0004)
+- [ ] Is personal data used only for marketing the customer agreed to, and can they opt out?
+- [ ] Can a customer's data be deleted on request, vectors included?
 
-### Cost
+**Evals**
+- [ ] Is there a test set and a pass mark, agreed before launch?
+- [ ] Does AI-written offer text match the real product's photo and description? (P4)
+- [ ] Is there a before/after or A/B test against the goal this change serves (G1–G4)?
 
-### Human oversight
+**Cost**
+- [ ] Is there a monthly spending cap on the LLM API, with an alert before it's reached?
+- [ ] Is the cost per offer or message estimated, and lower than what it's expected to bring in?
+- [ ] Does it use real-time only where a delay breaks something? (ADR 0003)
+
+**Human oversight**
+- [ ] Do offers that lose money go to an admin before they go live? (P1)
+- [ ] Is the monthly message limit enforced in code, whatever the AI suggests? (P3)
+- [ ] Does AI advice to admins show the numbers it's based on? (P2)
+- [ ] Can an admin pause a campaign, or the AI as a whole, with one switch?
 
 ## Automated guardrail (optional)
 
