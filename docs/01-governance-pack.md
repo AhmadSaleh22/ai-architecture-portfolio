@@ -37,8 +37,8 @@ The AI suggests. Code and people decide.
 | ADR | Decision | Principle |
 |---|---|---|
 | [0002 – Where the LLM runs](../adr/0002-llm-hosting.md) | LLM API hosted in the country | data stays in the country (PDPL) |
-| 0003 | *(to write)* | |
-| 0004 | *(to write)* | |
+| [0003 – Real-time or batch](../adr/0003-real-time-vs-batch.md) | Real-time only for the message count, cart reminders and the profit check; churn and segments nightly | P1, P3 |
+| [0004 – Where we store vectors](../adr/0004-vector-store.md) | pgvector in our existing PostgreSQL | P4, data stays in the country |
 
 ## ARB checklist
 
